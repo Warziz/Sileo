@@ -2,6 +2,7 @@ import socket
 import threading
 import argparse
 import pyfiglet
+import sys
 
 from utils.user import generate_username
 
@@ -10,19 +11,20 @@ def print_sileo():
     print(ascii_art)
 
 
-def listener(host, port):
+def listener(host:str, port:int, username:str):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((host, port))
     server.listen(1)
     print(f"En attente de connexion sur {host}:{port}...")
     conn, addr = server.accept()
-    print(f"Connecté avec {addr}")
 
     while True:
         data = conn.recv(1024)
         if not data:
             break
-        print(f"\nAnonymeUser>: {data.decode('utf-8')}")
+        sys.stdout.write(f"\rAnonymeUser >> {data.decode('utf-8')}\n")
+        sys.stdout.write(f"{username}(you)> ")
+        sys.stdout.flush()
     conn.close()
 
 def sender(target_host:str, target_port:int, username:str):
@@ -31,7 +33,7 @@ def sender(target_host:str, target_port:int, username:str):
     print(f"Connecté à {target_host}:{target_port}")
 
     while True:
-        msg = input(f"{username}>> ")
+        msg = input(f"{username}(you)>> ")
         if msg.lower() == "exit":
             break
         client.send(msg.encode('utf-8'))
