@@ -17,15 +17,21 @@ def listener(host:str, port:int, username:str):
     server.listen(1)
     print(f"En attente de connexion sur {host}:{port}...")
     conn, addr = server.accept()
+    print(f"Connexion établie avec {addr}")
 
     while True:
-        data = conn.recv(1024)
-        if not data:
+        try:
+            data = conn.recv(1024)
+            if not data:
+                break
+            message = data.decode('utf-8')
+            # Efface la ligne de saisie utilisateur
+            sys.stdout.write('\r' + ' ' * 80 + '\r')
+            sys.stdout.write(f"AnonymeUser >> {message}\n")
+            sys.stdout.write(f"{username}(you) >> ")
+            sys.stdout.flush()
+        except ConnectionResetError:
             break
-        sys.stdout.write(f"\rAnonymeUser >> {data.decode('utf-8')}\n")
-        sys.stdout.write(f"{username}(you)> ")
-        sys.stdout.flush()
-    conn.close()
 
 def sender(target_host:str, target_port:int, username:str):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -56,7 +62,7 @@ def main(target_ip):
     recv_port = 1501
 
     # Lancer l'écouteur dans un thread
-    threading.Thread(target=listener, args=(local_host, recv_port), daemon=True).start()
+    threading.Thread(target=listener, args=(local_host, recv_port, username), daemon=True).start()
 
     # Envoi des messages
     target_host = '172.30.160.68'
