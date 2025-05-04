@@ -5,7 +5,7 @@ import argparse
 import pyfiglet
 
 
-from utils.user import generate_username
+from utils.user import generate_username, rendezvous_sync
 from utils.network import get_local_ip, mapping_port, init_upnp, check_mapping, listener, sender
 
 
@@ -14,7 +14,7 @@ def print_sileo():
     print(ascii_art)
 
 
-def main(target_ip):
+def main(my_id:str, target_id:str):
     
     print_sileo()
     username = generate_username()
@@ -33,17 +33,20 @@ def main(target_ip):
     check_mapping(upnp)
     #faire un test plus tard
     
-    # Lancer l'écouteur dans un thread
-    threading.Thread(target=listener, args=(local_host, recv_port, username), daemon=True).start()
+    rendezvous_url = "http://54.36.100.6:5000"
+    target_port = 32245
+    peer_info = rendezvous_sync(my_id,target_port,target_id,rendezvous_url)
 
-    # Envoi des messages
-    target_host = '172.30.160.68'
-    target_port = 32245         # port distant d'écoute
-    sender(target_ip, target_port, username,upnp) #Se connecte à la machine distante sur le port 1501
+    if peer_info:
+        target_ip=peer_info["ip"]        
+        threading.Thread(target=listener, args=(local_host, recv_port, username), daemon=True).start()
+        # Envoi des messages
+        sender(target_ip, target_port, username,upnp) #Se connecte à la machine distante sur le port 32245
     
 if __name__ == "__main__":
         
     parser = argparse.ArgumentParser(prog='agent.py')
-    parser.add_argument("target_ip", type=str, help="The IP you want to connect for send message")
+    parser.add_argument("my_id", type=str, help="The username by which you can be contacted")
+    parser.add_argument("target_id", type=str, help="Your contact's id")
     args = parser.parse_args()
-    main(args.target_ip)
+    main(args.my_id, args.target_id)

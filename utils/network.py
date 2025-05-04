@@ -26,7 +26,7 @@ def init_upnp():
 def mapping_port(upnp, internal_port=1501, external_port=32245, protocol="TCP"):
 
      # Ajout d'une redirection de port
-     upnp.addportmapping(external_port, protocol, upnp.lanaddr, internal_port, "Test UPnP Mapping","")
+     upnp.addportmapping(external_port, protocol, upnp.lanaddr, internal_port, "Sileo","")
      print(f"Port {external_port} redirigé vers {upnp.lanaddr}:{internal_port}")
 
 def check_mapping(upnp, protocol="TCP"):
