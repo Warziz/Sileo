@@ -41,33 +41,45 @@ def delete_mapping(upnp, external_port=32245, protocol="UDP"):
      # Suppression de la redirection (facultatif)
      upnp.deleteportmapping(external_port, protocol)
      print(f"Port {external_port} fermé.")
-     
-def listener(sock: socket.socket, username: str):
 
+def hole_punching(ip, sport, dport, local_ip):
+    print("\n [+] Got peer")
+    print(f"[*] ip: {ip}")
+    print(f"[*] source port: {sport}")
+    print(f"[*] destiantion port: {dport}")
+
+    print("[!] Punching Hole")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((local_ip,sport))
+    sock.sendto(b'0',ip,dport)
+    
+    print("[+] Ready to exchange !") 
+     
+def listener(local_ip, sport, username: str):
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((local_ip,sport)) 
     while True:
         try:
-            data, addr = sock.recvfrom(1024)
+            data= sock.recv(1024)
             message = data.decode('utf-8')
             sys.stdout.write('\r' + ' ' * 80 + '\r')
-            sys.stdout.write(f"{addr[0]} >> {message}\n")
+            sys.stdout.write(f"AnonymeUser >> {message}\n")
             sys.stdout.write(f"{username}(you) >> ")
             sys.stdout.flush()
         except Exception as e:
             print(f"Erreur réception: {e}")
             break
 
-def sender(sock: socket.socket, target_addr: tuple, username: str, upnp):
+def sender(target_addr, dport, username: str):
     
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('0.0.0.0',dport))
     print(f"Connexion avec {target_addr}...")
-    
-    """
-    for _ in range(5):
-        sock.sendto(b"HELLO", target_addr)
-        time.sleep(0.5)
-    """
+
     while True:
         msg = input(f"{username}(you)>> ")
         if msg.lower() == "exit":
-            delete_mapping(upnp)
+            #delete_mapping(upnp)
             break
         sock.sendto(msg.encode('utf-8'), target_addr)
