@@ -3,7 +3,7 @@
 import threading
 import argparse
 import pyfiglet
-
+import socket
 
 from utils.user import generate_username, rendezvous_sync
 from utils.network import get_local_ip, mapping_port, init_upnp, check_mapping, listener, sender
@@ -20,7 +20,6 @@ def main(my_id:str, target_id:str):
     username = generate_username()
     
     local_host = get_local_ip() #Récupère l'ip local
-    #local_host = '172.30.160.1'
     recv_port = 1501
 
     #initialisation de l'upnp
@@ -38,10 +37,14 @@ def main(my_id:str, target_id:str):
     peer_info = rendezvous_sync(my_id,target_port,target_id,rendezvous_url)
 
     if peer_info:
-        target_ip=peer_info["ip"]        
-        threading.Thread(target=listener, args=(local_host, recv_port, username), daemon=True).start()
+        target_ip=peer_info["ip"]
+        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((local_host, recv_port))
+                
+        threading.Thread(target=listener, args=(sock, username), daemon=True).start()
         # Envoi des messages
-        sender(target_ip, target_port, username,upnp) #Se connecte à la machine distante sur le port 32245
+        sender(sock, (target_ip, target_port), username, upnp)
     
 if __name__ == "__main__":
         
