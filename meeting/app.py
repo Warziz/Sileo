@@ -2,6 +2,8 @@ import socket
 
 know_port = 50002
 
+
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(('0.0.0.0',55555))
 
@@ -11,13 +13,13 @@ while True:
     while True:
         data,address = sock.recvfrom(128)
         
-        print(f'connection from: {address}')
+        print(f'[+] Connection from: {address}')
         
         client.append(address)
         
         sock.sendto(b'ready',address)
         if len(client) == 2:
-            print('Got 2 clients, sending details to each')
+            print('[+] Got 2 clients, sending details to each')
             break
     c1 = client.pop()
     c1_addr, c1_port = c1

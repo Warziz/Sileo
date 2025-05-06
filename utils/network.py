@@ -71,10 +71,10 @@ def listener(local_ip, sport, username: str):
             print(f"Erreur réception: {e}")
             break
 
-def sender(target_addr, dport, username: str):
+def sender(target_addr, local_host, dport, sport,username: str):
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('0.0.0.0',dport))
+    sock.bind((local_host,dport))
     print(f"Connexion avec {target_addr}...")
 
     while True:
@@ -82,4 +82,4 @@ def sender(target_addr, dport, username: str):
         if msg.lower() == "exit":
             #delete_mapping(upnp)
             break
-        sock.sendto(msg.encode('utf-8'), target_addr)
+        sock.sendto(msg.encode('utf-8'), (target_addr,sport))
