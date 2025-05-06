@@ -42,7 +42,7 @@ def delete_mapping(upnp, external_port=32245, protocol="UDP"):
      upnp.deleteportmapping(external_port, protocol)
      print(f"Port {external_port} fermé.")
 
-def hole_punching(ip, sport, dport, local_ip):
+def hole_punching(ip, sport:int, dport:int):
     print("\n [+] Got peer")
     print(f"[*] ip: {ip}")
     print(f"[*] source port: {sport}")
@@ -50,15 +50,15 @@ def hole_punching(ip, sport, dport, local_ip):
 
     print("[!] Punching Hole")
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((local_ip,sport))
-    sock.sendto(b'0',ip,dport)
+    sock.bind(('0.0.0.0',sport))
+    sock.sendto(b'0',(ip,dport))
     
     print("[+] Ready to exchange !") 
      
-def listener(local_ip, sport, username: str):
+def listener(sport, username: str):
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((local_ip,sport)) 
+    sock.bind(('0.0.0.0',sport)) 
     while True:
         try:
             data= sock.recv(1024)
@@ -71,10 +71,10 @@ def listener(local_ip, sport, username: str):
             print(f"Erreur réception: {e}")
             break
 
-def sender(target_addr, local_host, dport, sport,username: str):
+def sender(target_addr, dport, sport,username: str):
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((local_host,dport))
+    sock.bind(('0.0.0.0',dport))
     print(f"Connexion avec {target_addr}...")
 
     while True:

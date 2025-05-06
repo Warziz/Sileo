@@ -43,8 +43,9 @@ def main(choice: int):
         ip,sport,dport = data.split(' ')
         sport = int(sport)
         dport = int(dport)
+        
     
-        hole_punching(ip,sport,dport,local_host)
+        hole_punching(ip,sport,dport)
     else:
 
         print("[*] Upnp method start...")
@@ -63,9 +64,9 @@ def main(choice: int):
     #    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     #    sock.bind((local_host, recv_port))
                 
-    threading.Thread(target=listener, args=(local_host, sport,username), daemon=True).start()
+    threading.Thread(target=listener, args=(sport,username), daemon=True).start()
         # Envoi des messages
-    sender(ip, local_host, dport, sport, username)
+    sender(ip, dport, sport, username)
     
 if __name__ == "__main__":
         
