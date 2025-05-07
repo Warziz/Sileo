@@ -20,16 +20,16 @@ def main(choice: int):
     username = generate_username()
     
     local_host = get_local_ip() #Récupère l'ip local
-    recv_port = 50001
-    target_port = 50002
+    local_port = 50001
+    remote_port = 50002
     
     if choice == 1:
         print("[*] UDP Hole punching start...")
     
-        rendezvous = ('54.36.100.6',55555)
+        rendezvous = ('51.143.219.149',55555)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((local_host, recv_port))
+        sock.bind(('0.0.0.0', local_port))
         sock.sendto(b'0',rendezvous)
     
         while True:
@@ -45,7 +45,7 @@ def main(choice: int):
         dport = int(dport)
         
     
-        hole_punching(ip,sport,dport)
+        hole_punching(ip,sport,dport,sock)
     else:
 
         print("[*] Upnp method start...")
@@ -64,9 +64,9 @@ def main(choice: int):
     #    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     #    sock.bind((local_host, recv_port))
                 
-    threading.Thread(target=listener, args=(sport,username), daemon=True).start()
+    threading.Thread(target=listener, args=(username,sock), daemon=True).start()
         # Envoi des messages
-    sender(ip, dport, sport, username)
+    sender(ip, sport, sock, username)
     
 if __name__ == "__main__":
         
