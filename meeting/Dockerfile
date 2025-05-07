@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY app.py
+COPY app.py .
 
-EXPOSE 5000
+EXPOSE 55555/udp
 CMD ["python", "app.py"]
