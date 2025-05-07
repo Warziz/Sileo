@@ -4,6 +4,7 @@ import threading
 import argparse
 import pyfiglet
 import socket
+import sys
 
 from utils.user import generate_username, rendezvous_sync
 from utils.network import get_local_ip, mapping_port, init_upnp, check_mapping, listener, sender, hole_punching
@@ -19,9 +20,9 @@ def main(choice: int):
     print_sileo()
     username = generate_username()
     
-    local_host = get_local_ip() #Récupère l'ip local
+    local_host = get_local_ip()
+    print(f"[*] Your local adresse IP: {local_host}")
     local_port = 50001
-    remote_port = 50002
     
     if choice == 1:
         print("[*] UDP Hole punching start...")
@@ -46,33 +47,35 @@ def main(choice: int):
         
     
         hole_punching(ip,sport,dport,sock)
-    else:
-
+    
+    elif choice == 2:
+        
         print("[*] Upnp method start...")
         #initialisation de l'upnp
-        #upnp = init_upnp()
+        upnp = init_upnp()
         #Creation du PAT, par defaut -> port intern: 50001, port extern: 50002
-        #mapping_port(upnp)
+        mapping_port(upnp)
         #Check du mapping
-        #check_mapping(upnp)
-        
-    #peer_info = rendezvous_sync(my_id,target_port,target_id,rendezvous_url)
+        check_mapping(upnp)
 
-    #if peer_info:
-    #    target_ip=peer_info["ip"]
-        
-    #    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #    sock.bind((local_host, recv_port))
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('0.0.0.0', local_port))
+        sock.sendto(b'0',rendezvous) #change value
+
+    else:
+        print("[-] Invalide connection method ! Exit...")
+        sys.exit(0)
+
                 
     threading.Thread(target=listener, args=(username,sock), daemon=True).start()
-        # Envoi des messages
+    # Envoi des messages
     sender(ip, sport, sock, username)
     
 if __name__ == "__main__":
         
     parser = argparse.ArgumentParser(prog='agent.py')
     parser.add_argument("choice", type=int, help="Choose your connection method, with Rendezvous-server is 1 (pure p2p) & 2 for Upnp configuration")
-        
+    
     args = parser.parse_args()
     main(args.choice)
     

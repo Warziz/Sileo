@@ -7,7 +7,6 @@ import miniupnpc
 def get_local_ip():
     hostname = socket.gethostname()
     local_host = socket.gethostbyname(hostname)
-    print(f"Your local adresse IP: {local_host}")
     return local_host
 
 def init_upnp():
@@ -19,7 +18,7 @@ def init_upnp():
 
      # Vérification de l'IP publique
      external_ip = upnp.externalipaddress()
-     print(f"IP Publique : {external_ip}")
+     print(f"[*] IP Publique : {external_ip}")
 
      return upnp
 
@@ -27,7 +26,7 @@ def mapping_port(upnp, internal_port=1501, external_port=32245, protocol="UDP"):
 
      # Ajout d'une redirection de port
      upnp.addportmapping(external_port, protocol, upnp.lanaddr, internal_port, "Sileo","")
-     print(f"Port {external_port} redirigé vers {upnp.lanaddr}:{internal_port}")
+     print(f"[*] Port {external_port} redirigé vers {upnp.lanaddr}:{internal_port}")
 
 def check_mapping(upnp, protocol="UDP"):
 
@@ -35,15 +34,15 @@ def check_mapping(upnp, protocol="UDP"):
      for i in range(10):
           mapping = upnp.getspecificportmapping(i, protocol)
           if mapping:
-               print(f"Port {i} : {mapping}")
+               print(f"[*] Port {i} : {mapping}")
 
 def delete_mapping(upnp, external_port=32245, protocol="UDP"):
      # Suppression de la redirection (facultatif)
      upnp.deleteportmapping(external_port, protocol)
-     print(f"Port {external_port} fermé.")
+     print(f"[*] Port {external_port} fermé.")
 
 def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
-    print("\n [+] Got peer")
+    print("\n[+] Got peer")
     print(f"[*] ip: {ip}")
     print(f"[*] source port: {sport}")
     print(f"[*] destiantion port: {dport}")
