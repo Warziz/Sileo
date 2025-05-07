@@ -1,77 +1,78 @@
-import socket
+
+
 import threading
 import argparse
 import pyfiglet
-import sys
+import socket
 
-from utils.user import generate_username
+from utils.user import generate_username, rendezvous_sync
+from utils.network import get_local_ip, mapping_port, init_upnp, check_mapping, listener, sender, hole_punching
+
 
 def print_sileo():
     ascii_art = pyfiglet.figlet_format("Sileo", font="slant")
     print(ascii_art)
 
 
-def listener(host:str, port:int, username:str):
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((host, port))
-    server.listen(1)
-    print(f"En attente de connexion sur {host}:{port}...")
-    conn, addr = server.accept()
-    print(f"Connexion établie avec {addr}")
-
-    while True:
-        try:
-            data = conn.recv(1024)
-            if not data:
-                break
-            message = data.decode('utf-8')
-            # Efface la ligne de saisie utilisateur
-            sys.stdout.write('\r' + ' ' * 80 + '\r')
-            sys.stdout.write(f"AnonymeUser >> {message}\n")
-            sys.stdout.write(f"{username}(you) >> ")
-            sys.stdout.flush()
-        except ConnectionResetError:
-            break
-
-def sender(target_host:str, target_port:int, username:str):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect((target_host, target_port))
-    print(f"Connecté à {target_host}:{target_port}")
-
-    while True:
-        msg = input(f"{username}(you)>> ")
-        if msg.lower() == "exit":
-            break
-        client.send(msg.encode('utf-8'))
-    client.close()
-
-def get_local_ip():
-    hostname = socket.gethostname()
-    local_host = socket.gethostbyname(hostname)
-    print(f"Your local adresse IP: {local_host}")
-    return local_host
-
-
-def main(target_ip):
+def main(choice: int):
     
     print_sileo()
     username = generate_username()
     
     local_host = get_local_ip() #Récupère l'ip local
-    #local_host = '172.30.160.1'
-    recv_port = 1501
+    local_port = 50001
+    remote_port = 50002
+    
+    if choice == 1:
+        print("[*] UDP Hole punching start...")
+    
+        rendezvous = ('51.143.219.149',55555)
 
-    # Lancer l'écouteur dans un thread
-    threading.Thread(target=listener, args=(local_host, recv_port, username), daemon=True).start()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('0.0.0.0', local_port))
+        sock.sendto(b'0',rendezvous)
+    
+        while True:
+            data = sock.recv(1024).decode()
+        
+            if data.strip() == 'ready':
+                print('[*] Checked in with server, waiting')
+                break
+    
+        data = sock.recv(1024).decode()
+        ip,sport,dport = data.split(' ')
+        sport = int(sport)
+        dport = int(dport)
+        
+    
+        hole_punching(ip,sport,dport,sock)
+    else:
 
-    # Envoi des messages
-    target_host = '172.30.160.68'
-    target_port = 1501         # port distant d'écoute
-    sender(target_ip, target_port, username) #Se connecte à la machine distante sur le port 1501
+        print("[*] Upnp method start...")
+        #initialisation de l'upnp
+        #upnp = init_upnp()
+        #Creation du PAT, par defaut -> port intern: 50001, port extern: 50002
+        #mapping_port(upnp)
+        #Check du mapping
+        #check_mapping(upnp)
+        
+    #peer_info = rendezvous_sync(my_id,target_port,target_id,rendezvous_url)
+
+    #if peer_info:
+    #    target_ip=peer_info["ip"]
+        
+    #    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #    sock.bind((local_host, recv_port))
+                
+    threading.Thread(target=listener, args=(username,sock), daemon=True).start()
+        # Envoi des messages
+    sender(ip, sport, sock, username)
     
 if __name__ == "__main__":
         
     parser = argparse.ArgumentParser(prog='agent.py')
-    parser.add_argument("target_ip", type=str, help="The IP you want to connect for send message")
+    parser.add_argument("choice", type=int, help="Choose your connection method, with Rendezvous-server is 1 (pure p2p) & 2 for Upnp configuration")
+        
     args = parser.parse_args()
-    main(args.target_ip)
+    main(args.choice)
+    
