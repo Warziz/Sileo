@@ -37,7 +37,7 @@ def init_upnp() -> miniupnpc:
 
      return upnp
 
-def mapping_port(upnp, internal_port=1501, external_port=32245, protocol="UDP"):
+def mapping_port(upnp, internal_port=50001, external_port=50002, protocol="UDP"):
 
      # Ajout d'une redirection de port
      upnp.addportmapping(external_port, protocol, upnp.lanaddr, internal_port, "Sileo","")

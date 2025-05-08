@@ -2,8 +2,6 @@ import socket
 
 know_port = 50002
 
-
-
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(('0.0.0.0',55555))
 
@@ -11,6 +9,8 @@ while True:
     client=[]
     
     while True:
+        
+        print("[*] Start listening")
         data,address = sock.recvfrom(128)
         
         print(f'[+] Connection from: {address}')
