@@ -3,13 +3,28 @@ import socket
 import sys
 import miniupnpc
 
+#------------- Init Functions -------------#
 
-def get_local_ip():
+def init_sock() -> socket:
+    
+    #A passer en paramètre    
+    rendezvous = ('51.143.219.149',55555)
+    local_port = 50001
+        
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('0.0.0.0', local_port))
+    sock.sendto(b'0',rendezvous)
+    
+    return sock
+
+def get_local_ip()->str:
     hostname = socket.gethostname()
     local_host = socket.gethostbyname(hostname)
     return local_host
 
-def init_upnp():
+#------------- UPNP Functions -------------#
+
+def init_upnp() -> miniupnpc:
      # Initialisation de l'UPnP client
      upnp = miniupnpc.UPnP()
      upnp.discoverdelay = 200 
@@ -40,6 +55,9 @@ def delete_mapping(upnp, external_port=32245, protocol="UDP"):
      # Suppression de la redirection (facultatif)
      upnp.deleteportmapping(external_port, protocol)
      print(f"[*] Port {external_port} fermé.")
+
+
+#------------- Hole punching Functions -------------#
 
 def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
     print("\n[+] Got peer")

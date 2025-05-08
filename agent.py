@@ -1,13 +1,12 @@
 
 
 import threading
-import argparse
 import pyfiglet
-import socket
 import sys
 
+from utils.arg import arguments
 from utils.user import generate_username, rendezvous_sync
-from utils.network import get_local_ip, mapping_port, init_upnp, check_mapping, listener, sender, hole_punching
+from utils.network import get_local_ip, mapping_port, init_upnp, check_mapping, listener, sender, hole_punching, init_sock
 
 
 def print_sileo():
@@ -15,53 +14,89 @@ def print_sileo():
     print(ascii_art)
 
 
-def main(choice: int):
+def main(method: str, anonymous: bool, search: str):
     
     print_sileo()
     username = generate_username()
     
     local_host = get_local_ip()
     print(f"[*] Your local adresse IP: {local_host}")
-    local_port = 50001
-    
-    if choice == 1:
-        print("[*] UDP Hole punching start...")
-    
-        rendezvous = ('51.143.219.149',55555)
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('0.0.0.0', local_port))
-        sock.sendto(b'0',rendezvous)
+    sock = init_sock()
     
-        while True:
+    method = method.lower()
+    
+    if method == "both":
+        try:
+            print("[*] UDP Hole punching start...")
+    
+            while True:
+                data = sock.recv(1024).decode()
+        
+                if data.strip() == 'ready':
+                    print('[*] Checked in with server, waiting')
+                    break
+    
             data = sock.recv(1024).decode()
+            ip,sport,dport = data.split(' ')
+            sport = int(sport)
+            dport = int(dport)
         
-            if data.strip() == 'ready':
-                print('[*] Checked in with server, waiting')
-                break
-    
-        data = sock.recv(1024).decode()
-        ip,sport,dport = data.split(' ')
-        sport = int(sport)
-        dport = int(dport)
+            hole_punching(ip,sport,dport,sock)
         
-    
-        hole_punching(ip,sport,dport,sock)
-    
-    elif choice == 2:
-        
-        print("[*] Upnp method start...")
-        #initialisation de l'upnp
-        upnp = init_upnp()
-        #Creation du PAT, par defaut -> port intern: 50001, port extern: 50002
-        mapping_port(upnp)
-        #Check du mapping
-        check_mapping(upnp)
+        except OSError:
+            
+            print("[-] Fail to connect with UDP Hole Punching ! ")
+            print("[*] Switch to Upnp")
+            print("[*] Upnp method start...")    
+            
+            #initialisation de l'upnp
+            upnp = init_upnp()
+            #Creation du PAT, par defaut -> port intern: 50001, port extern: 50002
+            mapping_port(upnp)
+            #Check du mapping
+            check_mapping(upnp)
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('0.0.0.0', local_port))
-        sock.sendto(b'0',rendezvous) #change value
+            sock = init_sock()
+            
+        except Exception as e:
+            print(f"[-] Something goes wrong: {e}")
+            sys.exit(1)
+    elif method == "hole":
+        try:
+            print("[*] UDP Hole punching start...")
+    
+            while True:
+                data = sock.recv(1024).decode()
+        
+                if data.strip() == 'ready':
+                    print('[*] Checked in with server, waiting')
+                    break
+    
+            data = sock.recv(1024).decode()
+            ip,sport,dport = data.split(' ')
+            sport = int(sport)
+            dport = int(dport)
+        
+            hole_punching(ip,sport,dport,sock)
+        except Exception as e:
+            print(f"[-] Something goes wrong: {e}")
+            sys.exit(1)
+                    
+    elif method == "upnp":
+        try:
+            print("[*] Upnp method start...")
+            #initialisation de l'upnp
+            upnp = init_upnp()
+            #Creation du PAT, par defaut -> port intern: 50001, port extern: 50002
+            mapping_port(upnp)
+            #Check du mapping
+            check_mapping(upnp)
 
+            sock = init_sock()
+        except Exception as e:
+            print(f"[-] Something goes wrong: {e}")
+            sys.exit(1)            
     else:
         print("[-] Invalide connection method ! Exit...")
         sys.exit(0)
@@ -73,9 +108,6 @@ def main(choice: int):
     
 if __name__ == "__main__":
         
-    parser = argparse.ArgumentParser(prog='agent.py')
-    parser.add_argument("choice", type=int, help="Choose your connection method, with Rendezvous-server is 1 (pure p2p) & 2 for Upnp configuration")
-    
-    args = parser.parse_args()
-    main(args.choice)
+    args = arguments()
+    main(args.method,args.anonymous,args.search)
     
