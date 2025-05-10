@@ -5,7 +5,7 @@ import miniupnpc
 
 #------------- Init Functions -------------#
 
-def init_sock() -> socket:
+def init_sock(method:int, dport:int) -> socket:
     
     #A passer en paramètre    
     rendezvous = ('51.143.219.149',55555)
@@ -13,7 +13,12 @@ def init_sock() -> socket:
         
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(('0.0.0.0', local_port))
-    sock.sendto(b'0',rendezvous)
+    
+    if method == 0:
+        sock.sendto(b'0',rendezvous)
+    else:
+        data = bytes(1+dport)
+        sock.sendto(data,rendezvous)
     
     return sock
 
@@ -51,7 +56,7 @@ def check_mapping(upnp, protocol="UDP"):
           if mapping:
                print(f"[*] Port {i} : {mapping}")
 
-def delete_mapping(upnp, external_port=32245, protocol="UDP"):
+def delete_mapping(upnp, external_port=50002, protocol="UDP"):
      # Suppression de la redirection (facultatif)
      upnp.deleteportmapping(external_port, protocol)
      print(f"[*] Port {external_port} fermé.")
@@ -84,7 +89,7 @@ def listener(username: str, sock: socket.socket):
             print(f"Erreur réception: {e}")
             break
 
-def sender(target_addr:str, sport:int, sock:socket.socket, username: str):
+def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp):
     
 
     print(f"Connexion avec {target_addr}...")
@@ -92,6 +97,6 @@ def sender(target_addr:str, sport:int, sock:socket.socket, username: str):
     while True:
         msg = input(f"{username}(you)>> ")
         if msg.lower() == "exit":
-            #delete_mapping(upnp)
+            delete_mapping(upnp)
             break
         sock.sendto(msg.encode('utf-8'), (target_addr,sport))

@@ -52,7 +52,7 @@ class Agent:
 
     def setup_hole_punching(self):
         print("[*] UDP Hole punching start...")
-        self.sock = init_sock()
+        self.sock = init_sock(0)
 
         while True:
             data = self.sock.recv(1024).decode()
@@ -67,12 +67,12 @@ class Agent:
 
         hole_punching(self.ip, self.sport, self.dport, self.sock)
 
-    def setup_upnp(self):
+    def setup_upnp(self, dport):
         print("[*] UPnP method start...")
         self.upnp = init_upnp()
         mapping_port(self.upnp)
         check_mapping(self.upnp)
-        self.sock = init_sock()
+        self.sock = init_sock(1,dport)
 
     def start(self):
         self.print_banner()
@@ -84,7 +84,8 @@ class Agent:
             if self.method == "hole":
                 self.setup_hole_punching()
             elif self.method == "upnp":
-                self.setup_upnp()
+                print("[-] UPNP not implemented !")
+                #self.setup_upnp(self.dport)
             elif self.method == "both":
                 try:
                     self.setup_hole_punching()
@@ -100,7 +101,7 @@ class Agent:
 
         # Start listener and sender
         threading.Thread(target=listener, args=(self.username, self.sock), daemon=True).start()
-        sender(self.ip, self.sport, self.sock, self.username)
+        sender(self.ip, self.sport, self.sock, self.username, self.upnp)
 
 
 if __name__ == "__main__":

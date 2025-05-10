@@ -13,21 +13,31 @@ while True:
         print("[*] Start listening")
         data,address = sock.recvfrom(128)
         
-        print(f'[+] Connection from: {address}')
+        if data == 0:
+            print(f'[+] Connection from: {address}')
         
-        client.append(address)
+            client.append(address)
         
-        sock.sendto(b'ready',address)
-        if len(client) == 2:
-            print('[+] Got 2 clients, sending details to each')
-            break
-    c1 = client.pop()
-    c1_addr, c1_port = c1
-    c2 = client.pop()
-    c2_addr, c2_port = c2
+            sock.sendto(b'ready',address)
+            if len(client) == 2:
+                print('[+] Got 2 clients, sending details to each')
+                break
+        else:    
+            print(f"[+] Connection from: {address}")
+            client.append(address)
+            
+            sock.sendto(b'ready',address)
+            if len(client) == 2:
+                print('[+] Got 2 clients, sending details to each')
+                break
+            
+        c1 = client.pop()
+        c1_addr, c1_port = c1
+        c2 = client.pop()
+        c2_addr, c2_port = c2
     
-    sock.sendto(f"{c1_addr} {c1_port} {know_port}".encode(), c2)
-    sock.sendto(f"{c2_addr} {c2_port} {know_port}".encode(), c1)
+        sock.sendto(f"{c1_addr} {c1_port} {know_port}".encode(), c2)
+        sock.sendto(f"{c2_addr} {c2_port} {know_port}".encode(), c1)
 
 """
 from flask import Flask, request, jsonify
