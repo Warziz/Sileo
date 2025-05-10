@@ -1,78 +1,110 @@
 
-
 import threading
-import argparse
 import pyfiglet
-import socket
+import signal
+import sys
 
-from utils.user import generate_username, rendezvous_sync
-from utils.network import get_local_ip, mapping_port, init_upnp, check_mapping, listener, sender, hole_punching
+from utils.arg import arguments
+from utils.user import generate_username
+from utils.network import (
+    get_local_ip, mapping_port, init_upnp, check_mapping,
+    listener, sender, hole_punching, init_sock
+)
 
 
-def print_sileo():
-    ascii_art = pyfiglet.figlet_format("Sileo", font="slant")
-    print(ascii_art)
+class Agent:
+    def __init__(self, method: str, anonymous: bool, search: str):
+        self.method = method.lower()
+        self.anonymous = anonymous
+        self.search = search
 
+        self.username = generate_username()
+        self.sock = None
+        self.upnp = None
+        self.ip = None
+        self.sport = 50001
+        self.dport = 50002
 
-def main(choice: int):
-    
-    print_sileo()
-    username = generate_username()
-    
-    local_host = get_local_ip() #Récupère l'ip local
-    local_port = 50001
-    remote_port = 50002
-    
-    if choice == 1:
+        signal.signal(signal.SIGINT, self.cleanup)
+
+    def print_banner(self):
+        ascii_art = pyfiglet.figlet_format("Sileo", font="slant")
+        print(ascii_art)
+
+    def cleanup(self, sig, frame):
+        print("\n[!] Caught termination signal, cleaning up...")
+
+        if self.sock:
+            try:
+                self.sock.close()
+                print("[*] Socket closed.")
+            except Exception as e:
+                print(f"[!] Error closing socket: {e}")
+
+        if self.upnp:
+            try:
+                self.upnp.deleteportmapping(self.dport, 'UDP')
+                print("[*] UPnP port mapping removed.")
+            except Exception as e:
+                print(f"[!] Error removing UPnP mapping: {e}")
+
+        sys.exit(0)
+
+    def setup_hole_punching(self):
         print("[*] UDP Hole punching start...")
-    
-        rendezvous = ('51.143.219.149',55555)
+        self.sock = init_sock(0)
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('0.0.0.0', local_port))
-        sock.sendto(b'0',rendezvous)
-    
         while True:
-            data = sock.recv(1024).decode()
-        
+            data = self.sock.recv(1024).decode()
             if data.strip() == 'ready':
                 print('[*] Checked in with server, waiting')
                 break
-    
-        data = sock.recv(1024).decode()
-        ip,sport,dport = data.split(' ')
-        sport = int(sport)
-        dport = int(dport)
-        
-    
-        hole_punching(ip,sport,dport,sock)
-    else:
 
-        print("[*] Upnp method start...")
-        #initialisation de l'upnp
-        #upnp = init_upnp()
-        #Creation du PAT, par defaut -> port intern: 50001, port extern: 50002
-        #mapping_port(upnp)
-        #Check du mapping
-        #check_mapping(upnp)
-        
-    #peer_info = rendezvous_sync(my_id,target_port,target_id,rendezvous_url)
+        data = self.sock.recv(1024).decode()
+        self.ip, self.sport, self.dport = data.split(' ')
+        self.sport = int(self.sport)
+        self.dport = int(self.dport)
 
-    #if peer_info:
-    #    target_ip=peer_info["ip"]
-        
-    #    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #    sock.bind((local_host, recv_port))
-                
-    threading.Thread(target=listener, args=(username,sock), daemon=True).start()
-        # Envoi des messages
-    sender(ip, sport, sock, username)
-    
+        hole_punching(self.ip, self.sport, self.dport, self.sock)
+
+    def setup_upnp(self, dport):
+        print("[*] UPnP method start...")
+        self.upnp = init_upnp()
+        mapping_port(self.upnp)
+        check_mapping(self.upnp)
+        self.sock = init_sock(1,dport)
+
+    def start(self):
+        self.print_banner()
+
+        print(f"[*] Your local IP: {get_local_ip()}")
+        print(f"[*] Using connection method: {self.method.upper()}")
+
+        try:
+            if self.method == "hole":
+                self.setup_hole_punching()
+            elif self.method == "upnp":
+                print("[-] UPNP not implemented !")
+                #self.setup_upnp(self.dport)
+            elif self.method == "both":
+                try:
+                    self.setup_hole_punching()
+                except OSError:
+                    print("[-] Hole punching failed, switching to UPnP.")
+                    self.setup_upnp()
+            else:
+                print("[-] Invalid connection method. Exiting...")
+                sys.exit(1)
+        except Exception as e:
+            print(f"[-] Unexpected error during setup: {e}")
+            sys.exit(1)
+
+        # Start listener and sender
+        threading.Thread(target=listener, args=(self.username, self.sock), daemon=True).start()
+        sender(self.ip, self.sport, self.sock, self.username, self.upnp)
+
+
 if __name__ == "__main__":
-        
-    parser = argparse.ArgumentParser(prog='agent.py')
-    parser.add_argument("choice", type=int, help="Choose your connection method, with Rendezvous-server is 1 (pure p2p) & 2 for Upnp configuration")
-        
-    args = parser.parse_args()
-    main(args.choice)
-    
+    args = arguments()
+    agent = Agent(args.method, args.anonymous, args.search)
+    agent.start()

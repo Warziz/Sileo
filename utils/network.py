@@ -3,14 +3,33 @@ import socket
 import sys
 import miniupnpc
 
+#------------- Init Functions -------------#
 
-def get_local_ip():
+def init_sock(method:int) -> socket:
+    
+    #A passer en paramètre    
+    rendezvous = ('51.143.219.149',55555)
+    local_port = 50001
+        
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('0.0.0.0', local_port))
+    
+    if method == 0:
+        sock.sendto(b'0',rendezvous)
+    else:
+        #data = bytes(1+dport)
+        sock.sendto(b'1',rendezvous)
+    
+    return sock
+
+def get_local_ip()->str:
     hostname = socket.gethostname()
     local_host = socket.gethostbyname(hostname)
-    print(f"Your local adresse IP: {local_host}")
     return local_host
 
-def init_upnp():
+#------------- UPNP Functions -------------#
+
+def init_upnp() -> miniupnpc:
      # Initialisation de l'UPnP client
      upnp = miniupnpc.UPnP()
      upnp.discoverdelay = 200 
@@ -19,15 +38,15 @@ def init_upnp():
 
      # Vérification de l'IP publique
      external_ip = upnp.externalipaddress()
-     print(f"IP Publique : {external_ip}")
+     print(f"[*] IP Publique : {external_ip}")
 
      return upnp
 
-def mapping_port(upnp, internal_port=1501, external_port=32245, protocol="UDP"):
+def mapping_port(upnp, internal_port=50001, external_port=50002, protocol="UDP"):
 
      # Ajout d'une redirection de port
      upnp.addportmapping(external_port, protocol, upnp.lanaddr, internal_port, "Sileo","")
-     print(f"Port {external_port} redirigé vers {upnp.lanaddr}:{internal_port}")
+     print(f"[*] Port {external_port} redirigé vers {upnp.lanaddr}:{internal_port}")
 
 def check_mapping(upnp, protocol="UDP"):
 
@@ -35,15 +54,18 @@ def check_mapping(upnp, protocol="UDP"):
      for i in range(10):
           mapping = upnp.getspecificportmapping(i, protocol)
           if mapping:
-               print(f"Port {i} : {mapping}")
+               print(f"[*] Port {i} : {mapping}")
 
-def delete_mapping(upnp, external_port=32245, protocol="UDP"):
+def delete_mapping(upnp, external_port=50002, protocol="UDP"):
      # Suppression de la redirection (facultatif)
      upnp.deleteportmapping(external_port, protocol)
-     print(f"Port {external_port} fermé.")
+     print(f"[*] Port {external_port} fermé.")
+
+
+#------------- Hole punching Functions -------------#
 
 def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
-    print("\n [+] Got peer")
+    print("\n[+] Got peer")
     print(f"[*] ip: {ip}")
     print(f"[*] source port: {sport}")
     print(f"[*] destiantion port: {dport}")
@@ -67,7 +89,7 @@ def listener(username: str, sock: socket.socket):
             print(f"Erreur réception: {e}")
             break
 
-def sender(target_addr:str, sport:int, sock:socket.socket, username: str):
+def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp):
     
 
     print(f"Connexion avec {target_addr}...")
@@ -75,6 +97,6 @@ def sender(target_addr:str, sport:int, sock:socket.socket, username: str):
     while True:
         msg = input(f"{username}(you)>> ")
         if msg.lower() == "exit":
-            #delete_mapping(upnp)
+            delete_mapping(upnp)
             break
         sock.sendto(msg.encode('utf-8'), (target_addr,sport))
