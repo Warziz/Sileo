@@ -22,14 +22,6 @@ while True:
             if len(client) == 2:
                 print('[+] Got 2 clients, sending details to each')
                 break
-        else:    
-            print(f"[+] Connection from: {address}")
-            client.append(address)
-            
-            sock.sendto(b'ready',address)
-            if len(client) == 2:
-                print('[+] Got 2 clients, sending details to each')
-                break
             
         c1 = client.pop()
         c1_addr, c1_port = c1
