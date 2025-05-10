@@ -5,7 +5,7 @@ import miniupnpc
 
 #------------- Init Functions -------------#
 
-def init_sock(method:int, dport:int) -> socket:
+def init_sock(method:int) -> socket:
     
     #A passer en paramètre    
     rendezvous = ('51.143.219.149',55555)
@@ -17,8 +17,8 @@ def init_sock(method:int, dport:int) -> socket:
     if method == 0:
         sock.sendto(b'0',rendezvous)
     else:
-        data = bytes(1+dport)
-        sock.sendto(data,rendezvous)
+        #data = bytes(1+dport)
+        sock.sendto(b'1',rendezvous)
     
     return sock
 
