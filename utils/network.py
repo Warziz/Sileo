@@ -2,6 +2,9 @@
 import socket
 import sys
 import miniupnpc
+from datetime import datetime, timezone
+
+from .user import color_text
 
 #------------- Init Functions -------------#
 
@@ -65,37 +68,42 @@ def delete_mapping(upnp, external_port=50002, protocol="UDP"):
 #------------- Hole punching Functions -------------#
 
 def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
-    print("\n[+] Got peer")
-    print(f"[*] ip: {ip}")
-    print(f"[*] source port: {sport}")
-    print(f"[*] destiantion port: {dport}")
+    print(color_text("\n[+] Got peer","green"))
+    print(color_text(f"[*] ip: {ip}","yellow"))
+    print(color_text(f"[*] source port: {sport}","yellow"))
+    print(color_text(f"[*] destiantion port: {dport}","yellow"))
 
-    print("[!] Punching Hole")
+    print(color_text("[!] Punching Hole","magenta"))
     sock.sendto(b'0',(ip,dport))
     
-    print("[+] Ready to exchange !") 
+    print(color_text("[+] Ready to exchange !","green")) 
      
 def listener(username: str, sock: socket.socket):
+
+    utc_now = datetime.now(timezone.utc)
+    time_str = utc_now.strftime("%Y%m%d-%H%M")
 
     while True:
         try:
             data= sock.recv(1024)
             message = data.decode('utf-8')
             sys.stdout.write('\r' + ' ' * 80 + '\r')
-            sys.stdout.write(f"AnonymeUser >> {message}\n")
-            sys.stdout.write(f"{username}(you) >> ")
+            sys.stdout.write(color_text(f"[{time_str}] - AnonymeUser > {message}\n", "cyan"))
+            sys.stdout.write(color_text(f"[{time_str}] - {username}(you) > ","green"))
             sys.stdout.flush()
         except Exception as e:
-            print(f"Erreur réception: {e}")
+            print(color_text(f"Erreur réception: {e}","red"))
             break
 
 def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp):
     
-
-    print(f"Connexion avec {target_addr}...")
+    utc_now = datetime.now(timezone.utc)
+    time_str = utc_now.strftime("%Y%m%d-%H%M")
+    
+    print(color_text(f"Connexion avec {target_addr}...","yellow"))
 
     while True:
-        msg = input(f"{username}(you)>> ")
+        msg = input(color_text(f"[{time_str}] - {username}(you) > ","green"))
         if msg.lower() == "exit":
             delete_mapping(upnp)
             break
