@@ -5,7 +5,7 @@ import signal
 import sys
 
 from utils.arg import arguments
-from utils.user import generate_username
+from utils.user import generate_username, color_text
 from utils.network import (
     get_local_ip, mapping_port, init_upnp, check_mapping,
     listener, sender, hole_punching, init_sock
@@ -32,7 +32,7 @@ class Agent:
         print(ascii_art)
 
     def cleanup(self, sig, frame):
-        print("\n[!] Caught termination signal, cleaning up...")
+        print(color_text("\n[!] Caught termination signal, cleaning up...","red"))
 
         if self.sock:
             try:
@@ -51,13 +51,13 @@ class Agent:
         sys.exit(0)
 
     def setup_hole_punching(self):
-        print("[*] UDP Hole punching start...")
+        print(color_text("[*] UDP Hole punching start...","yellow"))
         self.sock = init_sock(0)
 
         while True:
             data = self.sock.recv(1024).decode()
             if data.strip() == 'ready':
-                print('[*] Checked in with server, waiting')
+                print(color_text('[*] Checked in with server, waiting',"yellow"))
                 break
 
         data = self.sock.recv(1024).decode()
@@ -68,7 +68,7 @@ class Agent:
         hole_punching(self.ip, self.sport, self.dport, self.sock)
 
     def setup_upnp(self, dport):
-        print("[*] UPnP method start...")
+        print(color_text("[*] UPnP method start...","yellow"))
         self.upnp = init_upnp()
         mapping_port(self.upnp)
         check_mapping(self.upnp)
@@ -77,8 +77,8 @@ class Agent:
     def start(self):
         self.print_banner()
 
-        print(f"[*] Your local IP: {get_local_ip()}")
-        print(f"[*] Using connection method: {self.method.upper()}")
+        print(color_text(f"[*] Your local IP: {get_local_ip()}","yellow"))
+        print(color_text(f"[*] Using connection method: {self.method.upper()}","yellow"))
 
         try:
             if self.method == "hole":
@@ -90,10 +90,10 @@ class Agent:
                 try:
                     self.setup_hole_punching()
                 except OSError:
-                    print("[-] Hole punching failed, switching to UPnP.")
+                    print(color_text("[-] Hole punching failed, switching to UPnP.","red"))
                     self.setup_upnp()
             else:
-                print("[-] Invalid connection method. Exiting...")
+                print(color_text("[-] Invalid connection method. Exiting...","red"))
                 sys.exit(1)
         except Exception as e:
             print(f"[-] Unexpected error during setup: {e}")
