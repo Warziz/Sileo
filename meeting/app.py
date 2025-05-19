@@ -2,34 +2,82 @@ import socket
 
 know_port = 50002
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(('0.0.0.0',55555))
+def init_sock():
 
-while True:
-    client=[]
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('0.0.0.0',55555))
+
+    return sock
+
+def parser(data:bytes, address: str):
+
+    print(f'[+] Connection from: {address}')
+
+    param = data.decode()
+    ready = param['ready']
+    if ready == 1:
+        method = param['method']
+        if method == 'upnp':
+            dst_port = int(param['dst_port'])
+        username = param['username']
     
+    return username,method,dst_port
+
+
+def hole_punching_conn(client:list,address:bytes, sock:socket.socket):
+
     while True:
-        
-        print("[*] Start listening")
-        data,address = sock.recvfrom(128)
-        
-        if data == 0:
-            print(f'[+] Connection from: {address}')
-        
-            client.append(address)
-        
-            sock.sendto(b'ready',address)
-            if len(client) == 2:
-                print('[+] Got 2 clients, sending details to each')
-                break
+        sock.sendto(b'ready',address)
+        if len(client) == 2:
+            print('[+] Got 2 clients, sending details to each')
+            break
             
         c1 = client.pop()
         c1_addr, c1_port = c1
         c2 = client.pop()
         c2_addr, c2_port = c2
+            
+        sock.sendto(f"{c1_addr} {c1_port} {know_port}".encode(), c2)
+        sock.sendto(f"{c2_addr} {c2_port} {know_port}".encode(), c1)    
+
+def upnp_conn(client: list, address:str, dst_port:int, sock:socket.socket):
+    while True:
+        sock.sendto(b'ready',address)
+        if len(client) == 2:
+            print('[+] Got 2 clients, sending details to each')
+            break
     
+        c1 = client.pop()
+        c1_addr, c1_port = c1
+        c2 = client.pop()
+        c2_addr, c2_port = c2
+            
         sock.sendto(f"{c1_addr} {c1_port} {know_port}".encode(), c2)
         sock.sendto(f"{c2_addr} {c2_port} {know_port}".encode(), c1)
+
+def get_conn(sock: socket.socket):
+    
+    while True:
+        client=[]
+        
+        while True:
+            data,address = sock.recvfrom(128)
+            
+            username, method, dst_port = parser(data, address)
+            
+            if method == "hole":
+                client.append(address)
+                hole_punching_conn(client,address)
+            elif method == "upnp":
+                client.append(address,dst_port)
+                upnp_conn(address, dst_port)
+            else:
+                print("[-] Invalide connexion method")
+
+if __name__ == "__main__":
+
+    sock = init_sock()
+    get_conn(sock)
 
 """
 from flask import Flask, request, jsonify
