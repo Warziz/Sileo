@@ -14,12 +14,15 @@ from utils.network import (
 
 
 class Agent:
-    def __init__(self, method: str, anonymous: bool, search: str):
+    def __init__(self, method: str, anonymous: bool, search: str,  username: str):
         self.method = method.lower()
         self.anonymous = anonymous
         self.search = search
+        self.username = username
 
-        self.username = generate_username()
+        if anonymous == True or username == "":
+            self.username = generate_username()
+        
         self.sock = None
         self.upnp = None
         self.ip = None
@@ -31,7 +34,7 @@ class Agent:
     def print_banner(self):
         ascii_art = pyfiglet.figlet_format("Sileo", font="slant")
         print(ascii_art)
-
+    
     def cleanup(self, sig, frame):
         print(color_text("\n[!] Caught termination signal, cleaning up...","red"))
 
@@ -55,7 +58,7 @@ class Agent:
         data = dict(status = "ready", id = username, dport = dport, method = method)
         return data
 
-    def setup_hole_punching(self, data:dict):
+    def setup_hole_punching(self, data:dict) -> str:
         print(color_text("[*] UDP Hole punching start...","yellow"))
         self.sock = init_sock(data)
 
@@ -66,11 +69,13 @@ class Agent:
                 break
 
         data = self.sock.recv(1024).decode()
-        self.ip, self.sport, self.dport = data.split(' ')
+        self.ip, self.sport, self.dport, client_username = data.split(' ')
         self.sport = int(self.sport)
         self.dport = int(self.dport)
 
         hole_punching(self.ip, self.sport, self.dport, self.sock)
+
+        return client_username
 
     def setup_upnp(self, dport):
         print(color_text("[*] UPnP method start...","yellow"))
@@ -88,7 +93,7 @@ class Agent:
         try:
             if self.method == "hole":
                 data = self.format_data(self.username, self.dport, self.method)
-                self.setup_hole_punching(data)
+                client_username = self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
                 #self.setup_upnp(self.dport)
@@ -107,11 +112,11 @@ class Agent:
             sys.exit(1)
 
         # Start listener and sender
-        threading.Thread(target=listener, args=(self.username, self.sock), daemon=True).start()
+        threading.Thread(target=listener, args=(self.username, self.sock, client_username), daemon=True).start()
         sender(self.ip, self.sport, self.sock, self.username, self.upnp)
 
 
 if __name__ == "__main__":
     args = arguments()
-    agent = Agent(args.method, args.anonymous, args.search)
+    agent = Agent(args.method, args.anonymous, args.search, args.username)
     agent.start()

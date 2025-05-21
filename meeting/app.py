@@ -27,18 +27,18 @@ def parser(data: bytes, address: tuple) -> dict:
 
 
 
-def hole_punching_conn(client:list,address:bytes, sock:socket.socket):
+def hole_punching_conn(client:list, sock:socket.socket):
 
     if len(client) == 2:
         print('[+] Got 2 clients, sending details to each')
                     
-        c1 = client.pop()
+        c1 = client.pop(0,1)
         c1_addr, c1_port = c1
-        c2 = client.pop()
+        c2 = client.pop(0,1)
         c2_addr, c2_port = c2
             
-        sock.sendto(f"{c1_addr} {c1_port} {know_port}".encode(), c2)
-        sock.sendto(f"{c2_addr} {c2_port} {know_port}".encode(), c1)    
+        sock.sendto(f"{c1_addr} {c1_port} {know_port} {client[2]}".encode(), c2)
+        sock.sendto(f"{c2_addr} {c2_port} {know_port} {client[2]}".encode(), c1)    
 
 def upnp_conn(client: list, address:str, dst_port:int, sock:socket.socket):
     while True:
@@ -68,8 +68,10 @@ def get_conn(sock: socket.socket):
             if info['method'] == "hole":
                 if info['status'] == "ready":
                     sock.sendto(b'ready',address)
-                client.append(address)
-                hole_punching_conn(client,address,sock)
+                share = (info['ip_pub'], info['sport'], info['username'])
+                client.append(share)
+                hole_punching_conn(client,sock)
+
             elif info['method'] == "upnp":
                 client.append(address,info['dport'])
                 upnp_conn(address, info['dport'])
