@@ -7,6 +7,7 @@ import json
 from datetime import datetime, timezone
 
 from .user import color_text
+from agent import Agent
 
 #------------- Init Functions -------------#
 
@@ -66,6 +67,7 @@ def delete_mapping(upnp, external_port=50002, protocol="UDP"):
 #------------- Hole punching Functions -------------#
 
 def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
+    
     print(color_text("\n[+] Got peer","green"))
     print(color_text(f"[*] ip: {ip}","yellow"))
     print(color_text(f"[*] source port: {sport}","yellow"))
@@ -103,6 +105,6 @@ def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp):
     while True:
         msg = input(color_text(f"[{time_str}] - {username}(you) > ","green"))
         if msg.lower() == "exit":
-            delete_mapping(upnp)
-            break
+            Agent.cleanup()
+            
         sock.sendto(msg.encode('utf-8'), (target_addr,sport))
