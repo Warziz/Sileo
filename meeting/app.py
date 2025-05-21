@@ -34,13 +34,13 @@ def hole_punching_conn(client:list,address:bytes, sock:socket.socket):
             print('[+] Got 2 clients, sending details to each')
             break
             
-        c1 = client.pop()
-        c1_addr, c1_port = c1
-        c2 = client.pop()
-        c2_addr, c2_port = c2
+    c1 = client.pop()
+    c1_addr, c1_port = c1
+    c2 = client.pop()
+    c2_addr, c2_port = c2
             
-        sock.sendto(f"{c1_addr} {c1_port} {know_port}".encode(), c2)
-        sock.sendto(f"{c2_addr} {c2_port} {know_port}".encode(), c1)    
+    sock.sendto(f"{c1_addr} {c1_port} {know_port}".encode(), c2)
+    sock.sendto(f"{c2_addr} {c2_port} {know_port}".encode(), c1)    
 
 def upnp_conn(client: list, address:str, dst_port:int, sock:socket.socket):
     while True:
