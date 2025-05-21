@@ -3,9 +3,10 @@ import threading
 import pyfiglet
 import signal
 import sys
+import traceback
 
 from utils.arg import arguments
-from utils.user import generate_username
+from utils.user import generate_username, color_text
 from utils.network import (
     get_local_ip, mapping_port, init_upnp, check_mapping,
     listener, sender, hole_punching, init_sock
@@ -32,32 +33,36 @@ class Agent:
         print(ascii_art)
 
     def cleanup(self, sig, frame):
-        print("\n[!] Caught termination signal, cleaning up...")
+        print(color_text("\n[!] Caught termination signal, cleaning up...","red"))
 
         if self.sock:
             try:
                 self.sock.close()
-                print("[*] Socket closed.")
+                print(color_text("[*] Socket closed.","yellow"))
             except Exception as e:
-                print(f"[!] Error closing socket: {e}")
+                print(color_text(f"[!] Error closing socket: {e}","red"))
 
         if self.upnp:
             try:
                 self.upnp.deleteportmapping(self.dport, 'UDP')
-                print("[*] UPnP port mapping removed.")
+                print(color_text("[*] UPnP port mapping removed.","yellow"))
             except Exception as e:
-                print(f"[!] Error removing UPnP mapping: {e}")
+                print(color_text(f"[!] Error removing UPnP mapping: {e}","red"))
 
         sys.exit(0)
 
-    def setup_hole_punching(self):
-        print("[*] UDP Hole punching start...")
-        self.sock = init_sock(0)
+    def format_data(self, username, dport, method):
+        data = dict(id = username, dport = dport, method = method)
+        return data
+
+    def setup_hole_punching(self, data:dict):
+        print(color_text("[*] UDP Hole punching start...","yellow"))
+        self.sock = init_sock(data)
 
         while True:
             data = self.sock.recv(1024).decode()
             if data.strip() == 'ready':
-                print('[*] Checked in with server, waiting')
+                print(color_text('[*] Checked in with server, waiting',"yellow"))
                 break
 
         data = self.sock.recv(1024).decode()
@@ -68,7 +73,7 @@ class Agent:
         hole_punching(self.ip, self.sport, self.dport, self.sock)
 
     def setup_upnp(self, dport):
-        print("[*] UPnP method start...")
+        print(color_text("[*] UPnP method start...","yellow"))
         self.upnp = init_upnp()
         mapping_port(self.upnp)
         check_mapping(self.upnp)
@@ -77,12 +82,13 @@ class Agent:
     def start(self):
         self.print_banner()
 
-        print(f"[*] Your local IP: {get_local_ip()}")
-        print(f"[*] Using connection method: {self.method.upper()}")
+        print(color_text(f"[*] Your local IP: {get_local_ip()}","yellow"))
+        print(color_text(f"[*] Using connection method: {self.method.upper()}","yellow"))
 
         try:
             if self.method == "hole":
-                self.setup_hole_punching()
+                data = self.format_data(self.username, self.dport, self.method)
+                self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
                 #self.setup_upnp(self.dport)
@@ -90,13 +96,14 @@ class Agent:
                 try:
                     self.setup_hole_punching()
                 except OSError:
-                    print("[-] Hole punching failed, switching to UPnP.")
+                    print(color_text("[-] Hole punching failed, switching to UPnP.","red"))
                     self.setup_upnp()
             else:
-                print("[-] Invalid connection method. Exiting...")
+                print(color_text("[-] Invalid connection method. Exiting...","red"))
                 sys.exit(1)
         except Exception as e:
-            print(f"[-] Unexpected error during setup: {e}")
+            print(color_text(f"[-] Unexpected error during setup: {e}","red"))
+            traceback.print_exc()
             sys.exit(1)
 
         # Start listener and sender
