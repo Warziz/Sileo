@@ -3,6 +3,7 @@ import threading
 import pyfiglet
 import signal
 import sys
+import traceback
 
 from utils.arg import arguments
 from utils.user import generate_username, color_text
@@ -37,22 +38,26 @@ class Agent:
         if self.sock:
             try:
                 self.sock.close()
-                print("[*] Socket closed.")
+                print(color_text("[*] Socket closed.","yellow"))
             except Exception as e:
-                print(f"[!] Error closing socket: {e}")
+                print(color_text(f"[!] Error closing socket: {e}","red"))
 
         if self.upnp:
             try:
                 self.upnp.deleteportmapping(self.dport, 'UDP')
-                print("[*] UPnP port mapping removed.")
+                print(color_text("[*] UPnP port mapping removed.","yellow"))
             except Exception as e:
-                print(f"[!] Error removing UPnP mapping: {e}")
+                print(color_text(f"[!] Error removing UPnP mapping: {e}","red"))
 
         sys.exit(0)
 
-    def setup_hole_punching(self):
+    def format_data(self, username, dport, method):
+        data = dict(id = username, dport = dport, method = method)
+        return data
+
+    def setup_hole_punching(self, data:dict):
         print(color_text("[*] UDP Hole punching start...","yellow"))
-        self.sock = init_sock(0)
+        self.sock = init_sock(data)
 
         while True:
             data = self.sock.recv(1024).decode()
@@ -82,7 +87,8 @@ class Agent:
 
         try:
             if self.method == "hole":
-                self.setup_hole_punching()
+                data = self.format_data(self.username, self.dport, self.method)
+                self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
                 #self.setup_upnp(self.dport)
@@ -96,7 +102,8 @@ class Agent:
                 print(color_text("[-] Invalid connection method. Exiting...","red"))
                 sys.exit(1)
         except Exception as e:
-            print(f"[-] Unexpected error during setup: {e}")
+            print(color_text(f"[-] Unexpected error during setup: {e}","red"))
+            traceback.print_exc()
             sys.exit(1)
 
         # Start listener and sender

@@ -2,13 +2,15 @@
 import socket
 import sys
 import miniupnpc
+import json
+
 from datetime import datetime, timezone
 
 from .user import color_text
 
 #------------- Init Functions -------------#
 
-def init_sock(method:int) -> socket:
+def init_sock(data:dict) -> socket:
     
     #A passer en paramètre    
     rendezvous = ('51.143.219.149',55555)
@@ -17,11 +19,7 @@ def init_sock(method:int) -> socket:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(('0.0.0.0', local_port))
     
-    if method == 0:
-        sock.sendto(b'0',rendezvous)
-    else:
-        #data = bytes(1+dport)
-        sock.sendto(b'1',rendezvous)
+    sock.sendto(json.dumps(data).encode(),rendezvous)
     
     return sock
 
