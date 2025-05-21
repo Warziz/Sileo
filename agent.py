@@ -60,6 +60,7 @@ class Agent:
 
     def setup_hole_punching(self, data:dict) -> str:
         print(color_text("[*] UDP Hole punching start...","yellow"))
+        print(data)
         self.sock = init_sock(data)
 
         while True:
@@ -72,7 +73,7 @@ class Agent:
         self.ip, self.sport, self.dport, client_username = data.split(' ')
         self.sport = int(self.sport)
         self.dport = int(self.dport)
-
+        print(f"Username distant: {client_username}")
         hole_punching(self.ip, self.sport, self.dport, self.sock)
 
         return client_username

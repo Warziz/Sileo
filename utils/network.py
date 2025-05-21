@@ -79,11 +79,12 @@ def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
     print(color_text("[+] Ready to exchange !","green")) 
      
 def listener(username: str, sock: socket.socket, client_username:str):
-
-    utc_now = datetime.now(timezone.utc)
-    time_str = utc_now.strftime("%Y%m%d-%H%M")
-
+    
     while True:
+
+        utc_now = datetime.now(timezone.utc)
+        time_str = utc_now.strftime("%Y%m%d-%H%M")
+
         try:
             data= sock.recv(1024)
             message = data.decode('utf-8')

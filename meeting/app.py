@@ -20,7 +20,7 @@ def parser(data: bytes, address: tuple) -> dict:
         'ip_pub': address[0],
         'sport': address[1],
         'dport': int(decoded_data.get('dport')),
-        'username': decoded_data.get('username'),
+        'username': decoded_data.get('id'),
         'status': decoded_data.get('status'),
         'method': decoded_data.get('method')
     }
@@ -64,7 +64,7 @@ def get_conn(sock: socket.socket):
             data,address = sock.recvfrom(128)
             
             info = parser(data, address)
-            
+            print(info)
             if info['method'] == "hole":
                 if info['status'] == "ready":
                     sock.sendto(b'ready',address)
