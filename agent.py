@@ -52,7 +52,7 @@ class Agent:
         sys.exit(0)
 
     def format_data(self, username, dport, method):
-        data = dict(id = username, dport = dport, method = method)
+        data = dict(status = "ready", id = username, dport = dport, method = method)
         return data
 
     def setup_hole_punching(self, data:dict):

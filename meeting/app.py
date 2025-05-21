@@ -1,4 +1,5 @@
 import socket
+import json
 
 know_port = 50002
 
@@ -9,19 +10,20 @@ def init_sock():
 
     return sock
 
-def parser(data:bytes, address: str):
-
+def parser(data: bytes, address: tuple) -> dict:
     print(f'[+] Connection from: {address}')
-
-    param = data.decode()
-    ready = param['ready']
-    if ready == 1:
-        method = param['method']
-        if method == 'upnp':
-            dst_port = int(param['dst_port'])
-        username = param['username']
     
-    return username,method,dst_port
+    decoded_data = json.loads(data.decode())
+    
+    return {
+        'ip_pub': address[0],
+        'sport': address[1],
+        'dport': int(decoded_data.get('dport')),
+        'username': decoded_data.get('username'),
+        'status': decoded_data.get('status'),
+        'method': decoded_data.get('method')
+    }
+
 
 
 def hole_punching_conn(client:list,address:bytes, sock:socket.socket):
@@ -63,14 +65,14 @@ def get_conn(sock: socket.socket):
         while True:
             data,address = sock.recvfrom(128)
             
-            username, method, dst_port = parser(data, address)
+            info = parser(data, address)
             
-            if method == "hole":
+            if info['method'] == "hole":
                 client.append(address)
-                hole_punching_conn(client,address)
-            elif method == "upnp":
-                client.append(address,dst_port)
-                upnp_conn(address, dst_port)
+                hole_punching_conn(client,address,sock)
+            elif info['method'] == "upnp":
+                client.append(address,info['dport'])
+                upnp_conn(address, info['dport'])
             else:
                 print("[-] Invalide connexion method")
 
