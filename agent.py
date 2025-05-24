@@ -78,12 +78,12 @@ class Agent:
 
         return client_username
 
-    def setup_upnp(self, dport):
+    def setup_upnp(self, data:dict):
         print(color_text("[*] UPnP method start...","yellow"))
         self.upnp = init_upnp()
         mapping_port(self.upnp)
         check_mapping(self.upnp)
-        self.sock = init_sock(1,dport)
+        self.sock = init_sock(data)
 
     def start(self):
         self.print_banner()
@@ -97,7 +97,7 @@ class Agent:
                 client_username = self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
-                #self.setup_upnp(self.dport)
+                self.setup_upnp(self.dport)
             elif self.method == "both":
                 try:
                     self.setup_hole_punching()

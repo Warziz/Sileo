@@ -40,20 +40,19 @@ def hole_punching_conn(client:list, sock:socket.socket):
         sock.sendto(f"{c1_addr} {c1_port} {know_port} {c1_username}".encode(), c2)
         sock.sendto(f"{c2_addr} {c2_port} {know_port} {c2_username}".encode(), c1)    
 
-def upnp_conn(client: list, address:str, dst_port:int, sock:socket.socket):
-    while True:
-        sock.sendto(b'ready',address)
-        if len(client) == 2:
-            print('[+] Got 2 clients, sending details to each')
-            break
+def upnp_conn(client: list,sock:socket.socket):
     
-        c1 = client.pop()
-        c1_addr, c1_port = c1
-        c2 = client.pop()
-        c2_addr, c2_port = c2
-            
-        sock.sendto(f"{c1_addr} {c1_port} {know_port}".encode(), c2)
-        sock.sendto(f"{c2_addr} {c2_port} {know_port}".encode(), c1)
+
+    if len(client) == 2:
+        print('[+] Got 2 clients, sending details to each')
+    
+        c1_addr, c1_port, c1_username = client.pop()
+        c1 = c1_addr, c1_port
+        c2_addr, c2_port, c2_username = client.pop()
+        c2 = c2_addr, c2_port
+                
+        sock.sendto(f"{c1_addr} {c1_port} {c1_username}".encode(), c2)
+        sock.sendto(f"{c2_addr} {c2_port} {c2_username}".encode(), c1)
 
 def get_conn(sock: socket.socket):
     
@@ -73,8 +72,11 @@ def get_conn(sock: socket.socket):
                 hole_punching_conn(client,sock)
 
             elif info['method'] == "upnp":
-                client.append(address,info['dport'])
-                upnp_conn(address, info['dport'])
+                if info['status'] == "ready":
+                    sock.sendto(b'ready',address)
+                share = (info['ip_pub'],info['dport'],info['username'])
+                client.append(share)
+                upnp_conn(client,sock)
             else:
                 print("[-] Invalide connexion method")
 
