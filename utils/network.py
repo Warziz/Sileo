@@ -104,8 +104,5 @@ def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp):
     print(color_text(f"Connexion avec {target_addr}...","yellow"))
 
     while True:
-        msg = input(color_text(f"[{time_str}] - {username}(you) > ","green"))
-        if msg.lower() == "exit":
-            break
-            
+        msg = input(color_text(f"[{time_str}] - {username}(you) > ","green"))            
         sock.sendto(msg.encode('utf-8'), (target_addr,sport))
