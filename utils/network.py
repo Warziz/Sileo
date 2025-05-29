@@ -11,16 +11,15 @@ from .user import color_text
 
 #------------- Init Functions -------------#
 
-def init_sock(data:dict) -> socket:
+def init_sock() -> socket:
     
     #A passer en paramètre    
-    rendezvous = ('51.143.219.149',55555)
     local_port = 50001
         
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(('0.0.0.0', local_port))
     
-    sock.sendto(json.dumps(data).encode(),rendezvous)
+    #sock.sendto(json.dumps(data).encode(),rendezvous)
     
     return sock
 

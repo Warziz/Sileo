@@ -4,8 +4,11 @@ import pyfiglet
 import signal
 import sys
 import traceback
+import json
+from binascii import hexlify
 
 from utils.arg import arguments
+from utils.crypto import DiffieHellman
 from utils.user import generate_username, color_text
 from utils.network import (
     get_local_ip, mapping_port, init_upnp, check_mapping,
@@ -14,11 +17,18 @@ from utils.network import (
 
 
 class Agent:
-    def __init__(self, method: str, anonymous: bool, search: str,  username: str):
+    def __init__(self, method: str, anonymous: bool, search: str,  username: str, server_ip:str, server_port:int):
         self.method = method.lower()
         self.anonymous = anonymous
         self.search = search
         self.username = username
+        self.server = server_ip
+        self.server_port = server_port
+
+        if self.server and self.server_port == None:
+            self.server = "51.143.219.149"
+            self.server_port = 55555
+            self.rendezvous = (self.server,self.server_port)
 
         if anonymous == True or username == "":
             self.username = generate_username()
@@ -54,25 +64,57 @@ class Agent:
 
         sys.exit(0)
 
-    def format_data(self, username, dport, method):
-        data = dict(status = "ready", id = username, dport = dport, method = method)
+    def format_data(self,status,username, dport, method):
+        data = dict(status = status, id = username, dport = dport, method = method)
         return data
+
+    def setup_key(self, p:int, g:int, sock):
+
+        P = p
+
+        ka = DiffieHellman(p=P)
+        ka.default_generator
+        ka.private_key = ka.gen_private_key(ka.p)
+        ka_public = ka.get_public_key()
+        data = dict(kp = ka_public)
+        sock.sendto(json.dump(data).encode(),self.rendezvous)
+        
+        return ka
+        #kb_public = sock.recv(4096).decode()
+    
+    def generate_key(self,kb_public, ka):
+        ka.derive_shared_key(kb_public)
+        print("Key:", hexlify(ka.get_key()))
+        
 
     def setup_hole_punching(self, data:dict) -> str:
         print(color_text("[*] UDP Hole punching start...","yellow"))
         print(data)
-        self.sock = init_sock(data)
+        
+        self.sock = init_sock()
+        self.sock.sendto(json.dumps(data).encode(),self.rendezvous) #deplacer le rendez
+        #setup chiffrement
 
+        data = self.sock.recv(4096).decode()
+        p,g = data.split(' ')
+        ka = self.setup_key(p,g,self.sock)
+
+        data = self.format_data('ready',self.username,self.dport,self.method)
+        self.sock.sendto(json.dumps(data).encode(),self.rendezvous)
+        
         while True:
-            data = self.sock.recv(1024).decode()
+            data = self.sock.recv(4096).decode()
             if data.strip() == 'ready':
                 print(color_text('[*] Checked in with server, waiting',"yellow"))
                 break
 
-        data = self.sock.recv(1024).decode()
-        self.ip, self.sport, self.dport, client_username = data.split(' ')
+        data = self.sock.recv(4096).decode()
+        self.ip, self.sport, self.dport, client_username, key_pub = data.split(' ')
         self.sport = int(self.sport)
         self.dport = int(self.dport)
+        key = self.generate_key(key_pub,ka)
+        
+
         print(f"Username distant: {client_username}")
         hole_punching(self.ip, self.sport, self.dport, self.sock)
 
@@ -93,11 +135,11 @@ class Agent:
 
         try:
             if self.method == "hole":
-                data = self.format_data(self.username, self.dport, self.method)
+                data = self.format_data('check',self.method)
                 client_username = self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
-                self.setup_upnp(self.dport)
+                #self.setup_upnp(self.dport)
             elif self.method == "both":
                 try:
                     self.setup_hole_punching()
