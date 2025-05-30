@@ -68,46 +68,24 @@ class Agent:
     def format_data(self,status,username, dport, method):
         data = dict(status = status, id = username, dport = dport, method = method)
         return data
-
-    def setup_key(self, p:int, g:int, sock):
-
-        P = p
-
-        ka = DiffieHellman(p=P)
-        ka.default_generator
-        ka.private_key = ka.gen_private_key(ka.p)
-        ka_public = ka.get_public_key()
-        data = dict(kp = ka_public)
-        sock.sendto(json.dumps(data).encode(),self.rendezvous)
-        
-        return ka
-        #kb_public = sock.recv(4096).decode()
-    
-    def generate_key(self,kb_public, ka):
-        ka.derive_shared_key(kb_public)
-        print("Key:", hexlify(ka.get_key()))
         
 
     def setup_hole_punching(self,data:dict) -> str:
         print(color_text("[*] UDP Hole punching start...", "yellow"))
         self.sock = init_sock()
 
-        # Étape 1 - Demande de paramètres Diffie-Hellman
         self.sock.sendto(json.dumps(data).encode(), self.rendezvous)
 
-        # Étape 2 - Réception de p et g
         data = self.sock.recv(4096).decode()
         p, g = data.strip().split(' ')
         p = int(p)
         g = int(g)
 
-        # Étape 3 - Génération des clés DH
         dh = DiffieHellman(p=p)
         dh.default_generator
         dh.private_key = dh.gen_private_key(dh.p)
         dh_public = dh.get_public_key()
 
-        # Étape 4 - Envoi de la clé publique
         pubkey_payload = {
             "status": "pubkey",
             "method": "hole",
@@ -115,7 +93,6 @@ class Agent:
         }
         self.sock.sendto(json.dumps(pubkey_payload).encode(), self.rendezvous)
 
-        # Étape 5 - Envoi du message "ready"
         ready_payload = {
             "status": "ready",
             "method": "hole",
@@ -124,21 +101,20 @@ class Agent:
         }
         self.sock.sendto(json.dumps(ready_payload).encode(), self.rendezvous)
 
-        # Étape 6 - Attente de la réponse de pairing
+        # Wait for peer
         while True:
             data = self.sock.recv(4096).decode()
             if data.strip() == 'ready':
                 print(color_text('[*] Checked in with server, waiting', "yellow"))
                 continue
 
-            # Réception des infos du pair
             try:
                 ip, sport, pubkey_other, peer_username = data.strip().split(" ")
                 break
             except Exception as e:
                 print(color_text(f"[-] Error parsing peer info: {data} ({e})", "red"))
 
-        # Étape 7 - Création de la clé partagée
+        # Create shared key
         dh.derive_shared_key(int(pubkey_other))
         shared_key = dh.get_key()
         print(color_text(f"[+] Clé partagée dérivée : {hexlify(shared_key).decode()}", "green"))
