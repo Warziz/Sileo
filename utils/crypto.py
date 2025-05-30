@@ -46,12 +46,14 @@ class DiffieHellman:
 
 class Cipher:
 
+    @staticmethod
     def encrypt_message(self,aes_key: bytes, message: str) -> bytes:
         aesgcm = AESGCM(aes_key)
         nonce = os.urandom(12)
         ciphertext = aesgcm.encrypt(nonce, message.encode(), None)
         return nonce + ciphertext
 
+    @staticmethod
     def decrypt_message(self, aes_key: bytes, data: bytes) -> str:
         aesgcm = AESGCM(aes_key)
         nonce = data[:12]
