@@ -8,8 +8,8 @@ def arguments():
     parser.add_argument("--anonymous","-a", type=bool, default="True", help="Connect to someone with false pseudonyme")
     parser.add_argument("--search","-s", type=str, help="Search for people you want t odiscuss with")
     parser.add_argument("--username","-u",type=str, help="Enter your pseudonyme or one will be generate")
-    #parser.add_argument("--port", type=int, help="Bind your")
-    #parser.add_argument("--ip", type=str, help="")
+    parser.add_argument("--server_port", type=int, help="Bind your")
+    parser.add_argument("--server_ip", type=str, help="")
     parser.add_argument
     # rajouter les ports et ip server
     return parser.parse_args()
