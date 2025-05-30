@@ -77,6 +77,7 @@ def get_conn(sock: socket.socket):
             if info['status'] == "check":
                 
                 p = gen_prime()
+                print(p)
                 g = generator()
                 sock.sendto(f"{p} {g}".encode(), address)
 
