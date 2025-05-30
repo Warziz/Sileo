@@ -38,8 +38,6 @@ def parser(data: bytes, address: tuple) -> dict:
     return decoded_data
 
 
-
-
 def hole_punching_conn(client:list, sock:socket.socket):
 
     if len(client) == 2:
@@ -94,7 +92,6 @@ def get_conn(sock: socket.socket):
                     continue
 
                 sock.sendto(b'ready',address)
-                # Ajout à la file
                 client_data = (info['ip_pub'], info['sport'], info['username'], pubkey)
                 clients.append((address, client_data))
 

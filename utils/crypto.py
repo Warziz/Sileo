@@ -1,7 +1,13 @@
+
+import os
 import secrets
 import hashlib
 from binascii import hexlify
+
+
 from Crypto.Util import number
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
 
 class DiffieHellman:
 
@@ -36,6 +42,22 @@ class DiffieHellman:
 
     def get_key(self):
         return self.key
+
+
+class Cipher:
+
+    def encrypt_message(self,aes_key: bytes, message: str) -> bytes:
+        aesgcm = AESGCM(aes_key)
+        nonce = os.urandom(12)
+        ciphertext = aesgcm.encrypt(nonce, message.encode(), None)
+        return nonce + ciphertext
+
+    def decrypt_message(self, aes_key: bytes, data: bytes) -> str:
+        aesgcm = AESGCM(aes_key)
+        nonce = data[:12]
+        ciphertext = data[12:]
+        plaintext = aesgcm.decrypt(nonce, ciphertext, None)
+        return plaintext.decode()
 
 
 if __name__ == "__main__":

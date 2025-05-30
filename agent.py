@@ -125,7 +125,7 @@ class Agent:
         print(f"Username distant: {peer_username}")
         hole_punching(self.ip, self.sport, self.dport, self.sock)
 
-        return peer_username
+        return peer_username, shared_key
 
 
     def setup_upnp(self, data:dict):
@@ -144,7 +144,7 @@ class Agent:
         try:
             if self.method == "hole":
                 data = self.format_data(status='check',username=self.username, dport=None,method=self.method)
-                client_username = self.setup_hole_punching(data)
+                client_username, aes_key = self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
                 #self.setup_upnp(self.dport)
@@ -163,8 +163,8 @@ class Agent:
             sys.exit(1)
 
         # Start listener and sender
-        threading.Thread(target=listener, args=(self.username, self.sock, client_username), daemon=True).start()
-        sender(self.ip, self.sport, self.sock, self.username, self.upnp)
+        threading.Thread(target=listener, args=(self.username, self.sock, client_username, aes_key), daemon=True).start()
+        sender(self.ip, self.sport, self.sock, self.username, self.upnp, aes_key)
 
 
 if __name__ == "__main__":

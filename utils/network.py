@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timezone
 
 from .user import color_text
-
+from .crypto import Cipher
 
 #------------- Init Functions -------------#
 
@@ -77,7 +77,7 @@ def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
     
     print(color_text("[+] Ready to exchange !","green")) 
      
-def listener(username: str, sock: socket.socket, client_username:str):
+def listener(username: str, sock: socket.socket, client_username:str, aes_key:int):
     
     while True:
 
@@ -86,22 +86,24 @@ def listener(username: str, sock: socket.socket, client_username:str):
 
         try:
             data= sock.recv(1024)
-            message = data.decode('utf-8')
+            msg = data.decode('utf-8')
+            decrypt = Cipher.decrypt_message(aes_key,msg)
             sys.stdout.write('\r' + ' ' * 80 + '\r')
-            sys.stdout.write(color_text(f"[{time_str}] - {client_username} > {message}\n", "cyan"))
+            sys.stdout.write(color_text(f"[{time_str}] - {client_username} > {decrypt}\n", "cyan"))
             sys.stdout.write(color_text(f"[{time_str}] - {username}(you) > ","green"))
             sys.stdout.flush()
         except Exception as e:
             print(color_text(f"Erreur réception: {e}","red"))
             break
 
-def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp):
+def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp, aes_key:int):
     
-    utc_now = datetime.now(timezone.utc)
-    time_str = utc_now.strftime("%Y%m%d-%H%M")
     
     print(color_text(f"Connexion avec {target_addr}...","yellow"))
 
     while True:
+        utc_now = datetime.now(timezone.utc)
+        time_str = utc_now.strftime("%Y%m%d-%H%M")
         msg = input(color_text(f"[{time_str}] - {username}(you) > ","green"))            
-        sock.sendto(msg.encode('utf-8'), (target_addr,sport))
+        encrypted = Cipher.encrypt_message(aes_key,msg)
+        sock.sendto(encrypted.encode('utf-8'), (target_addr,sport))
