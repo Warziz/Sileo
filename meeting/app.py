@@ -44,17 +44,16 @@ def hole_punching_conn(client:list, sock:socket.socket):
     if len(client) == 2:
         print('[+] Got 2 clients, sending details to each')
                     
-        c1_addr, c1_port, c1_username = client.pop()
+        c1_addr, c1_port, c1_username, c1_pubkey = client.pop()
         c1 = c1_addr, c1_port
-        c2_addr, c2_port, c2_username = client.pop()
+        c2_addr, c2_port, c2_username, c2_pubkey = client.pop()
         c2 = c2_addr, c2_port
             
-        sock.sendto(f"{c1_addr} {c1_port} {know_port} {c1_username}".encode(), c2)
-        sock.sendto(f"{c2_addr} {c2_port} {know_port} {c2_username}".encode(), c1)    
+        sock.sendto(f"{c1_addr} {c1_port} {know_port} {c1_username} {c1_pubkey}".encode(), c2)
+        sock.sendto(f"{c2_addr} {c2_port} {know_port} {c2_username} {c2_pubkey}".encode(), c1)    
 
 def upnp_conn(client: list,sock:socket.socket):
     
-
     if len(client) == 2:
         print('[+] Got 2 clients, sending details to each')
     
