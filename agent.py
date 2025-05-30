@@ -163,6 +163,7 @@ class Agent:
             sys.exit(1)
 
         # Start listener and sender
+        print(color_text(f"[*] AES KEY: {aes_key}","yellow"))
         threading.Thread(target=listener, args=(self.username, self.sock, client_username, aes_key), daemon=True).start()
         sender(self.ip, self.sport, self.sock, self.username, self.upnp, aes_key)
 
