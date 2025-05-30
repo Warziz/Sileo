@@ -3,6 +3,7 @@ import socket
 import sys
 import miniupnpc
 import json
+import traceback
 
 from datetime import datetime, timezone
 
@@ -92,7 +93,8 @@ def listener(username: str, sock: socket.socket, client_username:str, aes_key:by
             sys.stdout.write(color_text(f"[{time_str}] - {username}(you) > ","green"))
             sys.stdout.flush()
         except Exception as e:
-            print(color_text(f"Erreur réception: {e}","red"))
+            print(color_text(f"Erreur réception: {e}", "red"))
+            traceback.print_exc()
             break
 
 def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp, aes_key:bytes):
