@@ -93,12 +93,12 @@ def get_conn(sock: socket.socket):
                     print(f"[-] Clé publique manquante pour {address}")
                     continue
 
+                sock.sendto(b'ready',address)
                 # Ajout à la file
                 client_data = (info['ip_pub'], info['sport'], info['username'], pubkey)
                 clients.append((address, client_data))
 
                 if len(clients) >= 2:
-                    # Prêt à connecter les 2 clients
                     (addr1, data1), (addr2, data2) = clients.pop(0), clients.pop(0)
 
                     # Envoie des infos croisées
