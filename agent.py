@@ -28,7 +28,8 @@ class Agent:
         if self.server and self.server_port == None:
             self.server = "51.143.219.149"
             self.server_port = 55555
-            self.rendezvous = (self.server,self.server_port)
+    
+        self.rendezvous = ("51.143.219.149",55555)
 
         if anonymous == True or username == "":
             self.username = generate_username()
@@ -77,7 +78,7 @@ class Agent:
         ka.private_key = ka.gen_private_key(ka.p)
         ka_public = ka.get_public_key()
         data = dict(kp = ka_public)
-        sock.sendto(json.dump(data).encode(),self.rendezvous)
+        sock.sendto(json.dumps(data).encode(),self.rendezvous)
         
         return ka
         #kb_public = sock.recv(4096).decode()
@@ -87,38 +88,69 @@ class Agent:
         print("Key:", hexlify(ka.get_key()))
         
 
-    def setup_hole_punching(self, data:dict) -> str:
-        print(color_text("[*] UDP Hole punching start...","yellow"))
-        print(data)
-        
+    def setup_hole_punching(self) -> str:
+        print(color_text("[*] UDP Hole punching start...", "yellow"))
         self.sock = init_sock()
-        self.sock.sendto(json.dumps(data).encode(),self.rendezvous) #deplacer le rendez
-        #setup chiffrement
 
+        # Étape 1 - Demande de paramètres Diffie-Hellman
+        self.sock.sendto(json.dumps(data).encode(), self.rendezvous)
+
+        # Étape 2 - Réception de p et g
         data = self.sock.recv(4096).decode()
-        p,g = data.split(' ')
-        ka = self.setup_key(p,g,self.sock)
+        p, g = data.strip().split(' ')
+        p = int(p)
+        g = int(g)
 
-        data = self.format_data('ready',self.username,self.dport,self.method)
-        self.sock.sendto(json.dumps(data).encode(),self.rendezvous)
-        
+        # Étape 3 - Génération des clés DH
+        dh = DiffieHellman(p=p)
+        dh.default_generator
+        dh.private_key = dh.gen_private_key(dh.p)
+        dh_public = dh.get_public_key()
+
+        # Étape 4 - Envoi de la clé publique
+        pubkey_payload = {
+            "status": "pubkey",
+            "method": "hole",
+            "pubkey": dh_public
+        }
+        self.sock.sendto(json.dumps(pubkey_payload).encode(), self.rendezvous)
+
+        # Étape 5 - Envoi du message "ready"
+        ready_payload = {
+            "status": "ready",
+            "method": "hole",
+            "username": self.username,
+            "sport": self.sport
+        }
+        self.sock.sendto(json.dumps(ready_payload).encode(), self.rendezvous)
+
+        # Étape 6 - Attente de la réponse de pairing
         while True:
             data = self.sock.recv(4096).decode()
             if data.strip() == 'ready':
-                print(color_text('[*] Checked in with server, waiting',"yellow"))
+                print(color_text('[*] Checked in with server, waiting', "yellow"))
+                continue
+
+            # Réception des infos du pair
+            try:
+                ip, sport, pubkey_other, peer_username = data.strip().split(" ")
                 break
+            except Exception as e:
+                print(color_text(f"[-] Error parsing peer info: {data} ({e})", "red"))
 
-        data = self.sock.recv(4096).decode()
-        self.ip, self.sport, self.dport, client_username, key_pub = data.split(' ')
-        self.sport = int(self.sport)
-        self.dport = int(self.dport)
-        key = self.generate_key(key_pub,ka)
-        
+        # Étape 7 - Création de la clé partagée
+        dh.derive_shared_key(int(pubkey_other))
+        shared_key = dh.get_key()
+        print(color_text(f"[+] Clé partagée dérivée : {hexlify(shared_key).decode()}", "green"))
 
-        print(f"Username distant: {client_username}")
+        self.ip = ip
+        self.sport = int(sport)
+
+        print(f"Username distant: {peer_username}")
         hole_punching(self.ip, self.sport, self.dport, self.sock)
 
-        return client_username
+        return peer_username
+
 
     def setup_upnp(self, data:dict):
         print(color_text("[*] UPnP method start...","yellow"))
@@ -135,8 +167,8 @@ class Agent:
 
         try:
             if self.method == "hole":
-                data = self.format_data('check',self.method)
-                client_username = self.setup_hole_punching(data)
+                #data = self.format_data(status='check',username=None, dport=None,method=self.method)
+                client_username = self.setup_hole_punching()
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
                 #self.setup_upnp(self.dport)
@@ -161,5 +193,5 @@ class Agent:
 
 if __name__ == "__main__":
     args = arguments()
-    agent = Agent(args.method, args.anonymous, args.search, args.username)
+    agent = Agent(args.method, args.anonymous, args.search, args.username, args.server_ip, args.server_port)
     agent.start()

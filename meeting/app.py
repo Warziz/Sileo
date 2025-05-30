@@ -65,40 +65,53 @@ def upnp_conn(client: list,sock:socket.socket):
         sock.sendto(f"{c1_addr} {c1_port} {c1_username} {c1_pubkey}".encode(), c2)
         sock.sendto(f"{c2_addr} {c2_port} {c2_username} {c2_pubkey}".encode(), c1)
 
+clients = []  # Stocke (ip, port, username, public_key)
+pending_keys = {}  # address -> public_key temporairement
+
 def get_conn(sock: socket.socket):
-    
     while True:
-        client=[]
-        
-        while True:
-            data,address = sock.recvfrom(1024)
-            
-            info = parser(data, address)
-            print(info)
-            if info['method'] == "hole":
-                if info['status'] == "check":
-                    sock.sendto(f'{gen_prime()} {generator()}'.encode(), address)
-                    while True:
-                        kp = sock.recv(4096)
-                        data = json.loads(kp.decode())
-                        key_recv = data.get('kp')
-                        break
+        data, address = sock.recvfrom(4096)
+        info = parser(data, address)
+        print(f"[+] Reçu de {address}: {info}")
+
+        if info['method'] == "hole":
+            if info['status'] == "check":
                 
-                if info['status'] == "ready":
-                    sock.sendto(b'ready',address)
+                p = gen_prime()
+                g = generator()
+                sock.sendto(f"{p} {g}".encode(), address)
 
-                share = (info['ip_pub'], info['sport'], info['username'],key_recv)
-                client.append(share)
-                hole_punching_conn(client,sock)
+            elif info['status'] == "pubkey":
+                # Réception de la clé publique du client
+                pending_keys[address] = info['pubkey']
 
-            elif info['method'] == "upnp":
-                if info['status'] == "ready":
-                    sock.sendto(f'ready {gen_prime()} {generator()}'.encode(), address)
-                share = (info['ip_pub'],info['dport'],info['username'])
-                client.append(share)
-                upnp_conn(client,sock)
-            else:
-                print("[-] Invalide connexion method")
+            elif info['status'] == "ready":
+                # Vérifie si la clé publique a été reçue avant
+                pubkey = pending_keys.get(address)
+                if not pubkey:
+                    print(f"[-] Clé publique manquante pour {address}")
+                    continue
+
+                # Ajout à la file
+                client_data = (info['ip_pub'], info['sport'], info['username'], pubkey)
+                clients.append((address, client_data))
+
+                if len(clients) >= 2:
+                    # Prêt à connecter les 2 clients
+                    (addr1, data1), (addr2, data2) = clients.pop(0), clients.pop(0)
+
+                    # Envoie des infos croisées
+                    # Format: IP, port, public_key, username
+                    msg1 = f"{data2[0]} {data2[1]} {data2[3]} {data2[2]}"
+                    msg2 = f"{data1[0]} {data1[1]} {data1[3]} {data1[2]}"
+                    sock.sendto(msg1.encode(), addr1)
+                    sock.sendto(msg2.encode(), addr2)
+
+                    print("[*] Clients connectés via UDP Hole Punching")
+
+        else:
+            print("[-] Méthode invalide")
+
 
 if __name__ == "__main__":
 
