@@ -67,7 +67,7 @@ def upnp_conn(client: list,sock:socket.socket):
 clients = []  # Stocke (ip, port, username, public_key)
 pending_keys = {}  # address -> public_key temporairement
 
-def get_conn(sock: socket.socket):
+def get_conn(sock: socket.socket,p:int):
     while True:
         data, address = sock.recvfrom(4096)
         info = parser(data, address)
@@ -76,8 +76,6 @@ def get_conn(sock: socket.socket):
         if info['method'] == "hole":
             if info['status'] == "check":
                 
-                p = gen_prime()
-                print(p)
                 g = generator()
                 sock.sendto(f"{p} {g}".encode(), address)
 
@@ -114,5 +112,7 @@ def get_conn(sock: socket.socket):
 
 if __name__ == "__main__":
 
+    p = gen_prime()
+    print("Prime:",p)
     sock = init_sock()
-    get_conn(sock)
+    get_conn(sock,p)
