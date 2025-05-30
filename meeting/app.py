@@ -31,7 +31,7 @@ def parser(data: bytes, address: tuple) -> dict:
     return {
         'ip_pub': address[0],
         'sport': address[1],
-        'dport': int(decoded_data.get('dport')),
+        'dport': decoded_data.get('dport'),
         'username': decoded_data.get('id'),
         'status': decoded_data.get('status'),
         'method': decoded_data.get('method')
@@ -81,7 +81,7 @@ def get_conn(sock: socket.socket):
                     sock.sendto(f'{gen_prime()} {generator()}'.encode(), address)
                     while True:
                         kp = sock.recv(4096)
-                        data = json.load(kp.decode())
+                        data = json.loads(kp.decode())
                         key_recv = data.get('kp')
                         break
                 
