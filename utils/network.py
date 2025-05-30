@@ -77,7 +77,7 @@ def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
     
     print(color_text("[+] Ready to exchange !","green")) 
      
-def listener(username: str, sock: socket.socket, client_username:str, aes_key:int):
+def listener(username: str, sock: socket.socket, client_username:str, aes_key:bytes):
     
     while True:
 
@@ -96,7 +96,7 @@ def listener(username: str, sock: socket.socket, client_username:str, aes_key:in
             print(color_text(f"Erreur réception: {e}","red"))
             break
 
-def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp, aes_key:int):
+def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp, aes_key:bytes):
     
     
     print(color_text(f"Connexion avec {target_addr}...","yellow"))
