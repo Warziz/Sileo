@@ -87,7 +87,7 @@ def listener(username: str, sock: socket.socket, client_username:str, aes_key:by
         try:
             data= sock.recv(1024)
             msg = data.decode('utf-8')
-            decrypt = Cipher.decrypt_message(aes_key,msg)
+            decrypt = Cipher.decrypt_message(aes_key=aes_key,data=msg)
             sys.stdout.write('\r' + ' ' * 80 + '\r')
             sys.stdout.write(color_text(f"[{time_str}] - {client_username} > {decrypt}\n", "cyan"))
             sys.stdout.write(color_text(f"[{time_str}] - {username}(you) > ","green"))
@@ -105,5 +105,5 @@ def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp, 
         utc_now = datetime.now(timezone.utc)
         time_str = utc_now.strftime("%Y%m%d-%H%M")
         msg = input(color_text(f"[{time_str}] - {username}(you) > ","green"))            
-        encrypted = Cipher.encrypt_message(aes_key,msg)
+        encrypted = Cipher.encrypt_message(aes_key=aes_key,message=msg)
         sock.sendto(encrypted.encode('utf-8'), (target_addr,sport))
