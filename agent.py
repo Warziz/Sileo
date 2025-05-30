@@ -88,7 +88,7 @@ class Agent:
         print("Key:", hexlify(ka.get_key()))
         
 
-    def setup_hole_punching(self) -> str:
+    def setup_hole_punching(self,data:dict) -> str:
         print(color_text("[*] UDP Hole punching start...", "yellow"))
         self.sock = init_sock()
 
@@ -167,8 +167,8 @@ class Agent:
 
         try:
             if self.method == "hole":
-                #data = self.format_data(status='check',username=None, dport=None,method=self.method)
-                client_username = self.setup_hole_punching()
+                data = self.format_data(status='check',username=self.username, dport=None,method=self.method)
+                client_username = self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
                 #self.setup_upnp(self.dport)

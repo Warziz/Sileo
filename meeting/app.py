@@ -26,16 +26,17 @@ def init_sock():
 def parser(data: bytes, address: tuple) -> dict:
     print(f'[+] Connection from: {address}')
     
-    decoded_data = json.loads(data.decode())
-    
-    return {
-        'ip_pub': address[0],
-        'sport': address[1],
-        'dport': decoded_data.get('dport'),
-        'username': decoded_data.get('id'),
-        'status': decoded_data.get('status'),
-        'method': decoded_data.get('method')
-    }
+    try:
+        decoded_data = json.loads(data.decode())
+    except json.JSONDecodeError as e:
+        print(f"[-] JSON decode error: {e}")
+        return {}
+
+    decoded_data['ip_pub'] = address[0]
+    decoded_data['sport'] = address[1]
+
+    return decoded_data
+
 
 
 
