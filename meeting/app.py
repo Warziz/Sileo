@@ -1,84 +1,117 @@
 import socket
+import json
+from Crypto.Util import number
+
 
 know_port = 50002
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(('0.0.0.0',55555))
+def gen_prime(keylenght=2048):
+    return number.getPrime(keylenght)
 
-while True:
-    client=[]
+def generator(g=2):
+    valid_generators = [2,3,5,7]
+    if g not in valid_generators:
+        raise ValueError("Invalide Generator !")
+    else:
+        return g
+
+def init_sock():
+
+    print("[*] Start listening")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('0.0.0.0',55555))
+
+    return sock
+
+def parser(data: bytes, address: tuple) -> dict:
+    print(f'[+] Connection from: {address}')
     
-    while True:
-        
-        print("[*] Start listening")
-        data,address = sock.recvfrom(128)
-        
-        if data == 0:
-            print(f'[+] Connection from: {address}')
-        
-            client.append(address)
-        
-            sock.sendto(b'ready',address)
-            if len(client) == 2:
-                print('[+] Got 2 clients, sending details to each')
-                break
+    try:
+        decoded_data = json.loads(data.decode())
+    except json.JSONDecodeError as e:
+        print(f"[-] JSON decode error: {e}")
+        return {}
+
+    decoded_data['ip_pub'] = address[0]
+    decoded_data['sport'] = address[1]
+
+    return decoded_data
+
+
+def hole_punching_conn(client:list, sock:socket.socket):
+
+    if len(client) == 2:
+        print('[+] Got 2 clients, sending details to each')
+                    
+        c1_addr, c1_port, c1_username, c1_pubkey = client.pop()
+        c1 = c1_addr, c1_port
+        c2_addr, c2_port, c2_username, c2_pubkey = client.pop()
+        c2 = c2_addr, c2_port
             
-        c1 = client.pop()
-        c1_addr, c1_port = c1
-        c2 = client.pop()
-        c2_addr, c2_port = c2
+        sock.sendto(f"{c1_addr} {c1_port} {know_port} {c1_username} {c1_pubkey}".encode(), c2)
+        sock.sendto(f"{c2_addr} {c2_port} {know_port} {c2_username} {c2_pubkey}".encode(), c1)    
+
+def upnp_conn(client: list,sock:socket.socket):
     
-        sock.sendto(f"{c1_addr} {c1_port} {know_port}".encode(), c2)
-        sock.sendto(f"{c2_addr} {c2_port} {know_port}".encode(), c1)
-
-"""
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import time
-
-app = Flask(__name__)
-CORS(app)
-
-peers = {}
-
-@app.route('/register', methods=['POST'])
-def register():
-    content = request.json
-    peer_id = content.get("id")
-    ip = request.remote_addr
-    port = content.get("port")
-
-    if not peer_id or not port:
-        return jsonify({"error": "id and port required"}), 400
-
-    peers[peer_id] = {"ip": ip, "port": port}
-    return jsonify({"status": "registered", "ip": ip, "port": port})
-
-@app.route('/wait_for_peer', methods=['POST'])
-def wait_for_peer():
+    if len(client) == 2:
+        print('[+] Got 2 clients, sending details to each')
     
-    #Un client appelle ce endpoint pour attendre un autre pair.
-    #Il doit envoyer son propre ID, et le nom du pair qu’il veut attendre.
-    
-    content = request.json
-    my_id = content.get("id")
-    target_id = content.get("target_id")
+        c1_addr, c1_port, c1_username, c1_pubkey = client.pop()
+        c1 = c1_addr, c1_port
+        c2_addr, c2_port, c2_username, c2_pubkey = client.pop()
+        c2 = c2_addr, c2_port
+                
+        sock.sendto(f"{c1_addr} {c1_port} {c1_username} {c1_pubkey}".encode(), c2)
+        sock.sendto(f"{c2_addr} {c2_port} {c2_username} {c2_pubkey}".encode(), c1)
 
-    start_time = time.time()
-    timeout = 20  # secondes
+clients = []  # Stocke (ip, port, username, public_key)
+pending_keys = {}  # address -> public_key temporairement
 
-    while time.time() - start_time < timeout:
-        if target_id in peers and my_id in peers:
-            return jsonify({
-                "peer": {
-                    "ip": peers[target_id]["ip"],
-                    "port": peers[target_id]["port"]
-                }
-            })
-        time.sleep(1)
+def get_conn(sock: socket.socket,p:int):
+    while True:
+        data, address = sock.recvfrom(4096)
+        info = parser(data, address)
+        print(f"[+] Reçu de {address}: {info}")
 
-    return jsonify({"error": "timeout waiting for peer"}), 408
+        if info['method'] == "hole":
+            if info['status'] == "check":
+                
+                g = generator()
+                sock.sendto(f"{p} {g}".encode(), address)
+
+            elif info['status'] == "pubkey":
+                # Réception de la clé publique du client
+                pending_keys[address] = info['pubkey']
+
+            elif info['status'] == "ready":
+                # Vérifie si la clé publique a été reçue avant
+                pubkey = pending_keys.get(address)
+                if not pubkey:
+                    print(f"[-] Clé publique manquante pour {address}")
+                    continue
+
+                sock.sendto(b'ready',address)
+                client_data = (info['ip_pub'], info['sport'], info['username'], pubkey)
+                clients.append((address, client_data))
+
+                if len(clients) >= 2:
+                    (addr1, data1), (addr2, data2) = clients.pop(0), clients.pop(0)
+
+                    # Envoie des infos croisées
+                    # Format: IP, port, public_key, username
+                    msg1 = f"{data2[0]} {data2[1]} {data2[3]} {data2[2]}"
+                    msg2 = f"{data1[0]} {data1[1]} {data1[3]} {data1[2]}"
+                    sock.sendto(msg1.encode(), addr1)
+                    sock.sendto(msg2.encode(), addr2)
+
+                    print("[*] Clients connectés via UDP Hole Punching")
+
+        else:
+            print("[-] Méthode invalide")
+
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
-"""
+
+    p = gen_prime()
+    sock = init_sock()
+    get_conn(sock,p)

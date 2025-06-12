@@ -4,8 +4,11 @@ import pyfiglet
 import signal
 import sys
 import traceback
+import json
+from binascii import hexlify
 
 from utils.arg import arguments
+from utils.crypto import DiffieHellman
 from utils.user import generate_username, color_text
 from utils.network import (
     get_local_ip, mapping_port, init_upnp, check_mapping,
@@ -14,12 +17,23 @@ from utils.network import (
 
 
 class Agent:
-    def __init__(self, method: str, anonymous: bool, search: str):
+    def __init__(self, method: str, anonymous: bool, search: str,  username: str, server_ip:str, server_port:int):
         self.method = method.lower()
         self.anonymous = anonymous
         self.search = search
+        self.username = username
+        self.server = server_ip
+        self.server_port = server_port
 
-        self.username = generate_username()
+        if self.server and self.server_port == None:
+            self.server = "51.143.219.149"
+            self.server_port = 55555
+    
+        self.rendezvous = ("51.143.219.149",55555)
+
+        if anonymous == True or username == "":
+            self.username = generate_username()
+        
         self.sock = None
         self.upnp = None
         self.ip = None
@@ -31,7 +45,7 @@ class Agent:
     def print_banner(self):
         ascii_art = pyfiglet.figlet_format("Sileo", font="slant")
         print(ascii_art)
-
+    
     def cleanup(self, sig, frame):
         print(color_text("\n[!] Caught termination signal, cleaning up...","red"))
 
@@ -51,33 +65,75 @@ class Agent:
 
         sys.exit(0)
 
-    def format_data(self, username, dport, method):
-        data = dict(id = username, dport = dport, method = method)
+    def format_data(self,status,username, dport, method):
+        data = dict(status = status, id = username, dport = dport, method = method)
         return data
+        
 
-    def setup_hole_punching(self, data:dict):
-        print(color_text("[*] UDP Hole punching start...","yellow"))
-        self.sock = init_sock(data)
+    def setup_hole_punching(self,data:dict) -> str:
+        print(color_text("[*] UDP Hole punching start...", "yellow"))
+        self.sock = init_sock()
 
+        self.sock.sendto(json.dumps(data).encode(), self.rendezvous)
+
+        data = self.sock.recv(4096).decode()
+        p, g = data.strip().split(' ')
+        p = int(p)
+        g = int(g)
+
+        dh = DiffieHellman(p=p)
+        dh.default_generator
+        dh.private_key = dh.gen_private_key(dh.p)
+        dh_public = dh.get_public_key()
+
+        pubkey_payload = {
+            "status": "pubkey",
+            "method": "hole",
+            "pubkey": dh_public
+        }
+        self.sock.sendto(json.dumps(pubkey_payload).encode(), self.rendezvous)
+
+        ready_payload = {
+            "status": "ready",
+            "method": "hole",
+            "username": self.username,
+            "sport": self.sport
+        }
+        self.sock.sendto(json.dumps(ready_payload).encode(), self.rendezvous)
+
+        # Wait for peer
         while True:
-            data = self.sock.recv(1024).decode()
+            data = self.sock.recv(4096).decode()
             if data.strip() == 'ready':
-                print(color_text('[*] Checked in with server, waiting',"yellow"))
+                print(color_text('[*] Checked in with server, waiting', "yellow"))
+                continue
+
+            try:
+                ip, sport, pubkey_other, peer_username = data.strip().split(" ")
                 break
+            except Exception as e:
+                print(color_text(f"[-] Error parsing peer info: {data} ({e})", "red"))
 
-        data = self.sock.recv(1024).decode()
-        self.ip, self.sport, self.dport = data.split(' ')
-        self.sport = int(self.sport)
-        self.dport = int(self.dport)
+        # Create shared key
+        dh.derive_shared_key(int(pubkey_other))
+        shared_key = dh.get_key()
+        print(color_text(f"[+] Clé partagée dérivée : {hexlify(shared_key).decode()}", "green"))
 
+        self.ip = ip
+        self.sport = int(sport)
+
+        print(f"Username distant: {peer_username}")
         hole_punching(self.ip, self.sport, self.dport, self.sock)
 
-    def setup_upnp(self, dport):
+        return peer_username, shared_key
+
+
+    def setup_upnp(self, data:dict):
         print(color_text("[*] UPnP method start...","yellow"))
         self.upnp = init_upnp()
         mapping_port(self.upnp)
         check_mapping(self.upnp)
-        self.sock = init_sock(1,dport)
+        self.sock = init_sock(data)
 
     def start(self):
         self.print_banner()
@@ -87,8 +143,8 @@ class Agent:
 
         try:
             if self.method == "hole":
-                data = self.format_data(self.username, self.dport, self.method)
-                self.setup_hole_punching(data)
+                data = self.format_data(status='check',username=self.username, dport=None,method=self.method)
+                client_username, aes_key = self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
                 #self.setup_upnp(self.dport)
@@ -107,11 +163,12 @@ class Agent:
             sys.exit(1)
 
         # Start listener and sender
-        threading.Thread(target=listener, args=(self.username, self.sock), daemon=True).start()
-        sender(self.ip, self.sport, self.sock, self.username, self.upnp)
+        print(color_text(f"[*] AES KEY: {aes_key}","yellow"))
+        threading.Thread(target=listener, args=(self.username, self.sock, client_username, aes_key), daemon=True).start()
+        sender(self.ip, self.sport, self.sock, self.username, self.upnp, aes_key)
 
 
 if __name__ == "__main__":
     args = arguments()
-    agent = Agent(args.method, args.anonymous, args.search)
+    agent = Agent(args.method, args.anonymous, args.search, args.username, args.server_ip, args.server_port)
     agent.start()

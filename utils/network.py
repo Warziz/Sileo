@@ -3,23 +3,24 @@ import socket
 import sys
 import miniupnpc
 import json
+import traceback
 
 from datetime import datetime, timezone
 
 from .user import color_text
+from .crypto import Cipher
 
 #------------- Init Functions -------------#
 
-def init_sock(data:dict) -> socket:
+def init_sock() -> socket:
     
     #A passer en paramètre    
-    rendezvous = ('51.143.219.149',55555)
     local_port = 50001
         
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(('0.0.0.0', local_port))
     
-    sock.sendto(json.dumps(data).encode(),rendezvous)
+    #sock.sendto(json.dumps(data).encode(),rendezvous)
     
     return sock
 
@@ -66,6 +67,7 @@ def delete_mapping(upnp, external_port=50002, protocol="UDP"):
 #------------- Hole punching Functions -------------#
 
 def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
+    
     print(color_text("\n[+] Got peer","green"))
     print(color_text(f"[*] ip: {ip}","yellow"))
     print(color_text(f"[*] source port: {sport}","yellow"))
@@ -76,33 +78,33 @@ def hole_punching(ip, sport:int, dport:int, sock: socket.socket):
     
     print(color_text("[+] Ready to exchange !","green")) 
      
-def listener(username: str, sock: socket.socket):
-
-    utc_now = datetime.now(timezone.utc)
-    time_str = utc_now.strftime("%Y%m%d-%H%M")
-
+def listener(username: str, sock: socket.socket, client_username:str, aes_key:bytes):
+    
     while True:
+
+        utc_now = datetime.now(timezone.utc)
+        time_str = utc_now.strftime("%Y%m%d-%H%M")
+
         try:
             data= sock.recv(1024)
-            message = data.decode('utf-8')
+            decrypt = Cipher.decrypt_message(aes_key=aes_key,data=data)
             sys.stdout.write('\r' + ' ' * 80 + '\r')
-            sys.stdout.write(color_text(f"[{time_str}] - AnonymeUser > {message}\n", "cyan"))
+            sys.stdout.write(color_text(f"[{time_str}] - {client_username} > {decrypt}\n", "cyan"))
             sys.stdout.write(color_text(f"[{time_str}] - {username}(you) > ","green"))
             sys.stdout.flush()
         except Exception as e:
-            print(color_text(f"Erreur réception: {e}","red"))
+            print(color_text(f"Erreur réception: {e}", "red"))
+            traceback.print_exc()
             break
 
-def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp):
+def sender(target_addr:str, sport:int, sock:socket.socket, username: str, upnp, aes_key:bytes):
     
-    utc_now = datetime.now(timezone.utc)
-    time_str = utc_now.strftime("%Y%m%d-%H%M")
     
     print(color_text(f"Connexion avec {target_addr}...","yellow"))
 
     while True:
-        msg = input(color_text(f"[{time_str}] - {username}(you) > ","green"))
-        if msg.lower() == "exit":
-            delete_mapping(upnp)
-            break
-        sock.sendto(msg.encode('utf-8'), (target_addr,sport))
+        utc_now = datetime.now(timezone.utc)
+        time_str = utc_now.strftime("%Y%m%d-%H%M")
+        msg = input(color_text(f"[{time_str}] - {username}(you) > ","green"))            
+        encrypted = Cipher.encrypt_message(aes_key=aes_key,message=msg)
+        sock.sendto(encrypted, (target_addr,sport))
