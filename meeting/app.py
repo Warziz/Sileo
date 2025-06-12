@@ -113,6 +113,5 @@ def get_conn(sock: socket.socket,p:int):
 if __name__ == "__main__":
 
     p = gen_prime()
-    print("Prime:",p)
     sock = init_sock()
     get_conn(sock,p)
