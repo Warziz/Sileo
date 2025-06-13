@@ -10,26 +10,27 @@ from binascii import hexlify
 from utils.arg import arguments
 from utils.crypto import DiffieHellman
 from utils.user import generate_username, color_text
-from utils.network import (
-    get_local_ip, mapping_port, init_upnp, check_mapping,
-    listener, sender, hole_punching, init_sock
-)
+from utils.network import NetworkManager
 
 
 class Agent:
-    def __init__(self, method: str, anonymous: bool, search: str,  username: str, server_ip:str, server_port:int):
+    def __init__(self, method: str, anonymous: bool, search: str,  username: str, server_ip:str, server_port:int, source_port:int, destination_port:int):
         self.method = method.lower()
         self.anonymous = anonymous
         self.search = search
         self.username = username
         self.server = server_ip
         self.server_port = server_port
+        self.sport = source_port
+        self.dport = destination_port
 
-        if self.server and self.server_port == None:
+        if self.server is None and self.server_port is None:
             self.server = "51.143.219.149"
             self.server_port = 55555
-    
-        self.rendezvous = ("51.143.219.149",55555)
+            self.rendezvous = ("51.143.219.149",55555)
+        else:
+            self.rendezvous = (server_ip,server_port)
+
 
         if anonymous == True or username == "":
             self.username = generate_username()
@@ -37,9 +38,15 @@ class Agent:
         self.sock = None
         self.upnp = None
         self.ip = None
-        self.sport = 50001
-        self.dport = 50002
 
+        if self.sport == None:
+            self.sport = 50001
+        
+        if self.dport == None:
+            self.dport = 50002
+        
+        self.net = NetworkManager(sport=self.sport,dport=self.dport)
+        
         signal.signal(signal.SIGINT, self.cleanup)
 
     def print_banner(self):
@@ -72,7 +79,7 @@ class Agent:
 
     def setup_hole_punching(self,data:dict) -> str:
         print(color_text("[*] UDP Hole punching start...", "yellow"))
-        self.sock = init_sock()
+        self.sock = self.net.init_sock()
 
         self.sock.sendto(json.dumps(data).encode(), self.rendezvous)
 
@@ -123,22 +130,22 @@ class Agent:
         self.sport = int(sport)
 
         print(f"Username distant: {peer_username}")
-        hole_punching(self.ip, self.sport, self.dport, self.sock)
+        self.net.hole_punching(self.ip)
 
         return peer_username, shared_key
 
 
     def setup_upnp(self, data:dict):
         print(color_text("[*] UPnP method start...","yellow"))
-        self.upnp = init_upnp()
-        mapping_port(self.upnp)
-        check_mapping(self.upnp)
-        self.sock = init_sock(data)
+        self.upnp = self.net.init_upnp()
+        self.net.mapping_port(self.upnp)
+        self.net.check_mapping(self.upnp)
+        self.sock = self.net.init_sock(data)
 
     def start(self):
         self.print_banner()
 
-        print(color_text(f"[*] Your local IP: {get_local_ip()}","yellow"))
+        print(color_text(f"[*] Your local IP: {self.net.get_local_ip()}","yellow"))
         print(color_text(f"[*] Using connection method: {self.method.upper()}","yellow"))
 
         try:
@@ -164,11 +171,11 @@ class Agent:
 
         # Start listener and sender
         print(color_text(f"[*] AES KEY: {aes_key}","yellow"))
-        threading.Thread(target=listener, args=(self.username, self.sock, client_username, aes_key), daemon=True).start()
-        sender(self.ip, self.sport, self.sock, self.username, self.upnp, aes_key)
+        threading.Thread(target=self.net.listener, args=(self.username, client_username, aes_key), daemon=True).start()
+        self.net.sender(self.ip, self.sport, self.username, aes_key)
 
 
 if __name__ == "__main__":
     args = arguments()
-    agent = Agent(args.method, args.anonymous, args.search, args.username, args.server_ip, args.server_port)
+    agent = Agent(args.method, args.anonymous, args.search, args.username, args.server_ip, args.server_port, args.source_port, args.destination_port)
     agent.start()
