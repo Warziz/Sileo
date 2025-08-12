@@ -167,10 +167,17 @@ class Agent:
                 client_username, aes_key = self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
+                # prepare data (dict)
                 # self.setup_upnp(self.dport)
             elif self.method == "both":
                 try:
-                    self.setup_hole_punching()
+                    data = self.format_data(
+                    status="check",
+                    username=self.username,
+                    dport=None,
+                    method=self.method,
+                )
+                    self.setup_hole_punching(data)
                 except OSError:
                     print(
                         color_text(

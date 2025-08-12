@@ -19,7 +19,7 @@ def arguments():
         help="Connect to someone with false pseudonyme",
     )
     parser.add_argument(
-        "--search", "-s", type=str, help="Search for people you want t odiscuss with"
+        "--search", "-s", type=str, help="Search for people you want to discuss with"
     )
     parser.add_argument(
         "--username",
