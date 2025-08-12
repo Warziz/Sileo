@@ -58,31 +58,3 @@ class Cipher:
         ciphertext = data[12:]
         plaintext = aesgcm.decrypt(nonce, ciphertext, None)
         return plaintext.decode()
-
-
-if __name__ == "__main__":
-
-    def gen_prime(key_length):
-        return number.getPrime(key_length)
-
-    P = gen_prime(key_length=2048)
-
-    alice = DiffieHellman(p=P)
-    bob = DiffieHellman(p=P)
-    bob.p = alice.p  # Même P et G
-    bob.default_generator = alice.default_generator
-    bob.private_key = bob.gen_private_key(bob.p)
-
-    alice_public = alice.get_public_key()
-    bob_public = bob.get_public_key()
-
-    alice.derive_shared_key(bob_public)
-    bob.derive_shared_key(alice_public)
-
-    if alice.get_key() == bob.get_key():
-        print("Shared key match")
-        print("Key:", hexlify(alice.get_key()))
-    else:
-        print("Shared secrets didn't match")
-        print("Alice key:", hexlify(alice.get_key()))
-        print("Bob key:", hexlify(bob.get_key()))
