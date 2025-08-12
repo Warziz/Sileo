@@ -40,17 +40,17 @@ class Agent:
         else:
             self.rendezvous = (server_ip, server_port)
 
-        if anonymous == True or username == "":
+        if anonymous or username == "":
             self.username = generate_username()
 
         self.sock = None
         self.upnp = None
         self.ip = None
 
-        if self.sport == None:
+        if self.sport is None:
             self.sport = 50001
 
-        if self.dport == None:
+        if self.dport is None:
             self.dport = 50002
 
         self.net = NetworkManager(sport=self.sport, dport=self.dport)
