@@ -19,7 +19,7 @@ class NetworkManager:
     # -------- Socket & IP Functions -------- #
     def init_sock(self) -> socket.socket:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('0.0.0.0', self.sport))
+        sock.bind(("0.0.0.0", self.sport))
         return sock
 
     @staticmethod
@@ -41,8 +41,9 @@ class NetworkManager:
     def mapping_port(self):
         if not self.upnp:
             raise RuntimeError("UPnP non initialisé. Appelez init_upnp() d'abord.")
-        self.upnp.addportmapping(self.dport, self.protocol, self.upnp.lanaddr,
-                                 self.sport, "Sileo", "")
+        self.upnp.addportmapping(
+            self.dport, self.protocol, self.upnp.lanaddr, self.sport, "Sileo", ""
+        )
         print(f"[*] Port {self.dport} redirigé vers {self.upnp.lanaddr}:{self.sport}")
 
     def check_mapping(self):
@@ -67,7 +68,7 @@ class NetworkManager:
         print(color_text(f"[*] destination port: {self.dport}", "yellow"))
 
         print(color_text("[!] Punching Hole", "magenta"))
-        self.sock.sendto(b'0', (ip, self.dport))
+        self.sock.sendto(b"0", (ip, self.dport))
         print(color_text("[+] Ready to exchange !", "green"))
 
     def listener(self, username: str, client_username: str, aes_key: bytes):
@@ -77,9 +78,15 @@ class NetworkManager:
             try:
                 data = self.sock.recv(1024)
                 decrypt = Cipher.decrypt_message(aes_key=aes_key, data=data)
-                sys.stdout.write('\r' + ' ' * 80 + '\r')
-                sys.stdout.write(color_text(f"[{time_str}] - {client_username} > {decrypt}\n", "cyan"))
-                sys.stdout.write(color_text(f"[{time_str}] - {username}(you) > ", "green"))
+                sys.stdout.write("\r" + " " * 80 + "\r")
+                sys.stdout.write(
+                    color_text(
+                        f"[{time_str}] - {client_username} > {decrypt}\n", "cyan"
+                    )
+                )
+                sys.stdout.write(
+                    color_text(f"[{time_str}] - {username}(you) > ", "green")
+                )
                 sys.stdout.flush()
             except Exception as e:
                 print(color_text(f"Erreur réception: {e}", "red"))
