@@ -14,8 +14,8 @@ def arguments():
     parser.add_argument(
         "--anonymous",
         "-a",
-        type=bool,
-        default="True",
+        action="store_true",
+        default=True,
         help="Connect to someone with false pseudonyme",
     )
     parser.add_argument(
