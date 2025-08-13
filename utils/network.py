@@ -63,14 +63,13 @@ class NetworkManager:
     # -------- Hole Punching Functions -------- #
     def hole_punching(self, ip: str):
 
-        self.sock
         print(color_text("\n[+] Got peer", "green"))
         print(color_text(f"[*] ip: {ip}", "yellow"))
         print(color_text(f"[*] source port: {self.sport}", "yellow"))
         print(color_text(f"[*] destination port: {self.dport}", "yellow"))
 
         print(color_text("[!] Punching Hole", "magenta"))
-        self.sock.sendto(b"0", (ip, self.dport)) 
+        self.sock.sendto(b"CTRL:PUNCH", (ip, self.sport)) # Vérif srt
         print(color_text("[+] Ready to exchange !", "green"))
 
     def listener(self, username: str, client_username: str, aes_key: bytes):
@@ -78,18 +77,21 @@ class NetworkManager:
             utc_now = datetime.now(timezone.utc)
             time_str = utc_now.strftime("%Y%m%d-%H%M")
             try:
-                data = self.sock.recv(1024)
-                decrypt = Cipher.decrypt_message(aes_key=aes_key, data=data)
-                sys.stdout.write("\r" + " " * 80 + "\r")
-                sys.stdout.write(
-                    color_text(
-                        f"[{time_str}] - {client_username} > {decrypt}\n", "cyan"
+                data = self.sock.recv(1024) #changer taille
+                if data == b"CTRL:PUNCH":
+                    continue
+                else:
+                    decrypt = Cipher.decrypt_message(aes_key=aes_key, data=data)
+                    sys.stdout.write("\r" + " " * 80 + "\r")
+                    sys.stdout.write(
+                        color_text(
+                            f"[{time_str}] - {client_username} > {decrypt}\n", "cyan"
+                        )
                     )
-                )
-                sys.stdout.write(
-                    color_text(f"[{time_str}] - {username}(you) > ", "green")
-                )
-                sys.stdout.flush()
+                    sys.stdout.write(
+                        color_text(f"[{time_str}] - {username}(you) > ", "green")
+                    )
+                    sys.stdout.flush()
             except Exception as e:
                 print(color_text(f"Erreur réception: {e}", "red"))
                 traceback.print_exc()
