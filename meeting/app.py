@@ -126,10 +126,22 @@ def get_conn(sock: socket.socket, p: int):
                 if not pubkey:
                     print(f"[-] Clé publique manquante pour {address}")
                     continue
-                
+
                 sock.sendto(b"ready", address)
-                client_data = (info["ip_pub"], info["sport"], info["username"], pubkey)
+                client_data = (info["ip_pub"], info["dport"], info["username"], pubkey)
                 clients.append((address, client_data))
+                
+                if len(clients) >= 2:
+                    (addr1, data1), (addr2, data2) = clients.pop(0), clients.pop(0)
+
+                    # Envoie des infos croisées
+                    # Format: IP, port, public_key, username
+                    msg1 = f"{data2[0]} {data2[1]} {data2[3]} {data2[2]}"
+                    msg2 = f"{data1[0]} {data1[1]} {data1[3]} {data1[2]}"
+                    sock.sendto(msg1.encode(), addr1)
+                    sock.sendto(msg2.encode(), addr2)
+
+                    print("[*] Clients connectés via UPNP")
 
         else:
             print("[-] Méthode invalide")

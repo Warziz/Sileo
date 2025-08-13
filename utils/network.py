@@ -69,7 +69,7 @@ class NetworkManager:
         print(color_text(f"[*] destination port: {self.dport}", "yellow"))
 
         print(color_text("[!] Punching Hole", "magenta"))
-        self.sock.sendto(b"CTRL:PUNCH", (ip, self.sport)) # Vérif srt
+        self.sock.sendto(b"CTRL:PUNCH", (ip, self.sport))
         print(color_text("[+] Ready to exchange !", "green"))
 
     def listener(self, username: str, client_username: str, aes_key: bytes):
@@ -97,11 +97,11 @@ class NetworkManager:
                 traceback.print_exc()
                 break
 
-    def sender(self, target_addr: str, sport: int, username: str, aes_key: bytes):
+    def sender(self, target_addr: str, port: int, username: str, aes_key: bytes):
         print(color_text(f"Connexion avec {target_addr}...", "yellow"))
         while True:
             utc_now = datetime.now(timezone.utc)
             time_str = utc_now.strftime("%Y%m%d-%H%M")
             msg = input(color_text(f"[{time_str}] - {username}(you) > ", "green"))
             encrypted = Cipher.encrypt_message(aes_key=aes_key, message=msg)
-            self.sock.sendto(encrypted, (target_addr, sport))
+            self.sock.sendto(encrypted, (target_addr, port))

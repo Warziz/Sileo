@@ -145,7 +145,7 @@ class Agent:
         )
 
         self.ip = ip
-        self.sport = int(sport)
+        self.port = int(sport)
 
         print(f"Username distant: {peer_username}")
         self.net.hole_punching(self.ip)
@@ -178,7 +178,7 @@ class Agent:
             "status": "ready",
             "method": "upnp",
             "username": self.username,
-            "sport": None,
+            "dport": self.dport,
         }
         self.sock.sendto(json.dumps(ready_payload).encode(), self.rendezvous)
 
@@ -204,7 +204,7 @@ class Agent:
         )
 
         self.ip = dist_ip
-        self.dport = int(dport)
+        self.port = int(dport)
 
         print(f"Username distant: {peer_username}")
         return peer_username, shared_key        
@@ -269,7 +269,7 @@ class Agent:
             args=(self.username, client_username, aes_key),
             daemon=True,
         ).start()
-        self.net.sender(self.ip, self.sport, self.username, aes_key)
+        self.net.sender(self.ip, self.port, self.username, aes_key)
 
 
 if __name__ == "__main__":
