@@ -178,7 +178,7 @@ class Agent:
             "status": "ready",
             "method": "upnp",
             "username": self.username,
-            "sport": self.sport,
+            "sport": None,
         }
         self.sock.sendto(json.dumps(ready_payload).encode(), self.rendezvous)
 
@@ -189,7 +189,7 @@ class Agent:
                 continue
 
             try:
-                ip, sport, pubkey_other, peer_username = data.strip().split(" ")
+                dist_ip, dport, pubkey_other, peer_username = data.strip().split(" ")
                 break
             except Exception as e:
                 print(color_text(f"[-] Error parsing peer info: {data} ({e})", "red"))
@@ -203,8 +203,8 @@ class Agent:
             )
         )
 
-        self.ip = ip
-        self.sport = int(sport)
+        self.ip = dist_ip
+        self.dport = int(dport)
 
         print(f"Username distant: {peer_username}")
         return peer_username, shared_key        

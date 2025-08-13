@@ -18,9 +18,9 @@ class NetworkManager:
 
     # -------- Socket & IP Functions -------- #
     def init_sock(self) -> socket.socket:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(("0.0.0.0", self.sport))
-        return sock
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind(("0.0.0.0", self.sport))
+        return self.sock
 
     @staticmethod
     def get_local_ip() -> str:
@@ -62,6 +62,8 @@ class NetworkManager:
 
     # -------- Hole Punching Functions -------- #
     def hole_punching(self, ip: str):
+
+        self.sock
         print(color_text("\n[+] Got peer", "green"))
         print(color_text(f"[*] ip: {ip}", "yellow"))
         print(color_text(f"[*] source port: {self.sport}", "yellow"))
