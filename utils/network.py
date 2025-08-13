@@ -70,7 +70,7 @@ class NetworkManager:
         print(color_text(f"[*] destination port: {self.dport}", "yellow"))
 
         print(color_text("[!] Punching Hole", "magenta"))
-        self.sock.sendto(b"0", (ip, self.dport))
+        self.sock.sendto(b"0", (ip, self.dport)) 
         print(color_text("[+] Ready to exchange !", "green"))
 
     def listener(self, username: str, client_username: str, aes_key: bytes):

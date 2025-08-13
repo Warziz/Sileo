@@ -158,7 +158,7 @@ class Agent:
         self.net.mapping_port(self.upnp)
         self.net.check_mapping(self.upnp)
         
-        self.sock = self.net.init_sock(data)
+        self.sock = self.net.init_sock()
         self.sock.sendto(json.dumps(data).encode(), self.rendezvous)
         
         data = self.sock.recv(4096).decode()

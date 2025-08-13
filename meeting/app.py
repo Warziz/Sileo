@@ -3,7 +3,7 @@ import json
 from Crypto.Util import number
 
 
-know_port = 50002
+#know_port = 50002
 
 
 def gen_prime(keylenght=2048):
@@ -40,7 +40,7 @@ def parser(data: bytes, address: tuple) -> dict:
 
     return decoded_data
 
-
+"""
 def hole_punching_conn(client: list, sock: socket.socket):
     if len(client) == 2:
         print("[+] Got 2 clients, sending details to each")
@@ -56,7 +56,7 @@ def hole_punching_conn(client: list, sock: socket.socket):
         sock.sendto(
             f"{c2_addr} {c2_port} {know_port} {c2_username} {c2_pubkey}".encode(), c1
         )
-
+"""
 
 def upnp_conn(client: list, sock: socket.socket):
     if len(client) == 2:
@@ -112,6 +112,24 @@ def get_conn(sock: socket.socket, p: int):
                     sock.sendto(msg2.encode(), addr2)
 
                     print("[*] Clients connectés via UDP Hole Punching")
+        
+        elif info["method"] == "upnp":
+            if info["status"] == "check":
+                g = generator()
+                sock.sendto(f"{p} {g}".encode(), address)
+            elif info["status"] == "pubkey":
+                # Réception de la clé publique du client
+                pending_keys[address] = info["pubkey"]
+            elif info["status"] == "ready":
+                # Vérifie si la clé publique a été reçue avant
+                pubkey = pending_keys.get(address)
+                if not pubkey:
+                    print(f"[-] Clé publique manquante pour {address}")
+                    continue
+                
+                sock.sendto(b"ready", address)
+                client_data = (info["ip_pub"], info["sport"], info["username"], pubkey)
+                clients.append((address, client_data))
 
         else:
             print("[-] Méthode invalide")
