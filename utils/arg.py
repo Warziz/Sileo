@@ -37,7 +37,7 @@ def arguments():
         "--server_port",
         "-srv_p",
         type=int,
-        help="Bind your the port of RendezVous Server",
+        help="Bind your own RendezVous Server port",
     )
     parser.add_argument(
         "--source_port",

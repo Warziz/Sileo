@@ -58,10 +58,18 @@ class Agent:
         signal.signal(signal.SIGINT, self.cleanup)
 
     def print_banner(self):
+        """
+        printing banner Sileo
+        """
+        
         ascii_art = pyfiglet.figlet_format("Sileo", font="slant")
         print(ascii_art)
 
     def cleanup(self, sig, frame):
+        """
+        function use to cleanup socker and port mapping if ctrl+c is press
+        """
+
         print(color_text("\n[!] Caught termination signal, cleaning up...", "red"))
 
         if self.sock:
@@ -81,6 +89,9 @@ class Agent:
         sys.exit(0)
 
     def format_data(self, status, username, dport, method):
+        """
+        formatting data in dict for sending it to the RendezVous server
+        """
         data = dict(status=status, id=username, dport=dport, method=method)
         return data
 
@@ -146,7 +157,57 @@ class Agent:
         self.upnp = self.net.init_upnp()
         self.net.mapping_port(self.upnp)
         self.net.check_mapping(self.upnp)
+        
         self.sock = self.net.init_sock(data)
+        self.sock.sendto(json.dumps(data).encode(), self.rendezvous)
+        
+        data = self.sock.recv(4096).decode()
+        p, g = data.strip().split(" ")
+        p = int(p)
+        g = int(g)
+
+        dh = DiffieHellman(p=p)
+        dh.default_generator
+        dh.private_key = dh.gen_private_key(dh.p)
+        dh_public = dh.get_public_key()
+
+        pubkey_payload = {"status": "pubkey", "method": "upnp", "pubkey": dh_public}
+        self.sock.sendto(json.dumps(pubkey_payload).encode(), self.rendezvous)
+
+        ready_payload = {
+            "status": "ready",
+            "method": "upnp",
+            "username": self.username,
+            "sport": self.sport,
+        }
+        self.sock.sendto(json.dumps(ready_payload).encode(), self.rendezvous)
+
+        while True:
+            data = self.sock.recv(4096).decode()
+            if data.strip() == "ready":
+                print(color_text("[*] Checked in with server, waiting", "yellow"))
+                continue
+
+            try:
+                ip, sport, pubkey_other, peer_username = data.strip().split(" ")
+                break
+            except Exception as e:
+                print(color_text(f"[-] Error parsing peer info: {data} ({e})", "red"))
+
+        # Create shared key
+        dh.derive_shared_key(int(pubkey_other))
+        shared_key = dh.get_key()
+        print(
+            color_text(
+                f"[+] Clé partagée dérivée : {hexlify(shared_key).decode()}", "green"
+            )
+        )
+
+        self.ip = ip
+        self.sport = int(sport)
+
+        print(f"Username distant: {peer_username}")
+        return peer_username, shared_key        
 
     def start(self):
         self.print_banner()
@@ -167,8 +228,16 @@ class Agent:
                 client_username, aes_key = self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
+                
                 # prepare data (dict)
-                # self.setup_upnp(self.dport)
+                data = self.format_data(
+                    status="check",
+                    username=self.username,
+                    dport=self.dport,
+                    method=self.method
+                )
+                
+                client_username, aes_key = self.setup_upnp(data)
             elif self.method == "both":
                 try:
                     data = self.format_data(
