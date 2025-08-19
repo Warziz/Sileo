@@ -61,7 +61,7 @@ class Agent:
         """
         printing banner Sileo
         """
-        
+
         ascii_art = pyfiglet.figlet_format("Sileo", font="slant")
         print(ascii_art)
 
@@ -157,10 +157,10 @@ class Agent:
         self.upnp = self.net.init_upnp()
         self.net.mapping_port(self.upnp)
         self.net.check_mapping(self.upnp)
-        
+
         self.sock = self.net.init_sock()
         self.sock.sendto(json.dumps(data).encode(), self.rendezvous)
-        
+
         data = self.sock.recv(4096).decode()
         p, g = data.strip().split(" ")
         p = int(p)
@@ -207,7 +207,7 @@ class Agent:
         self.port = int(dport)
 
         print(f"Username distant: {peer_username}")
-        return peer_username, shared_key        
+        return peer_username, shared_key
 
     def start(self):
         self.print_banner()
@@ -228,24 +228,24 @@ class Agent:
                 client_username, aes_key = self.setup_hole_punching(data)
             elif self.method == "upnp":
                 print("[-] UPNP not implemented !")
-                
+
                 # prepare data (dict)
                 data = self.format_data(
                     status="check",
                     username=self.username,
                     dport=self.dport,
-                    method=self.method
+                    method=self.method,
                 )
-                
+
                 client_username, aes_key = self.setup_upnp(data)
             elif self.method == "both":
                 try:
                     data = self.format_data(
-                    status="check",
-                    username=self.username,
-                    dport=None,
-                    method=self.method,
-                )
+                        status="check",
+                        username=self.username,
+                        dport=None,
+                        method=self.method,
+                    )
                     self.setup_hole_punching(data)
                 except OSError:
                     print(

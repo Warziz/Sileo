@@ -38,7 +38,7 @@ class NetworkManager:
         print(f"[*] IP Publique : {external_ip}")
         return upnp
 
-    def mapping_port(self, upnp:miniupnpc):
+    def mapping_port(self, upnp: miniupnpc):
         if not upnp:
             raise RuntimeError("UPnP non initialisé. Appelez init_upnp() d'abord.")
         upnp.addportmapping(
@@ -46,7 +46,7 @@ class NetworkManager:
         )
         print(f"[*] Port {self.dport} redirigé vers {upnp.lanaddr}:{self.sport}")
 
-    def check_mapping(self,upnp:miniupnpc):
+    def check_mapping(self, upnp: miniupnpc):
         if not upnp:
             raise RuntimeError("UPnP non initialisé.")
         for i in range(10):
@@ -54,7 +54,7 @@ class NetworkManager:
             if mapping:
                 print(f"[*] Port {i} : {mapping}")
 
-    def delete_mapping(self, upnp:miniupnpc):
+    def delete_mapping(self, upnp: miniupnpc):
         if not upnp:
             raise RuntimeError("UPnP non initialisé.")
         self.upnp.deleteportmapping(self.dport, self.protocol)
@@ -62,7 +62,6 @@ class NetworkManager:
 
     # -------- Hole Punching Functions -------- #
     def hole_punching(self, ip: str):
-
         print(color_text("\n[+] Got peer", "green"))
         print(color_text(f"[*] ip: {ip}", "yellow"))
         print(color_text(f"[*] source port: {self.sport}", "yellow"))
@@ -77,7 +76,7 @@ class NetworkManager:
             utc_now = datetime.now(timezone.utc)
             time_str = utc_now.strftime("%Y%m%d-%H%M")
             try:
-                data = self.sock.recv(1024) #changer taille
+                data = self.sock.recv(1024)  # changer taille
                 if data == b"CTRL:PUNCH":
                     continue
                 else:
