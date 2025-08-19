@@ -29,33 +29,33 @@ class NetworkManager:
 
     # -------- UPNP Functions -------- #
     def init_upnp(self):
-        self.upnp = miniupnpc.UPnP()
-        self.upnp.discoverdelay = 200
-        self.upnp.discover()
-        self.upnp.selectigd()
+        upnp = miniupnpc.UPnP()
+        upnp.discoverdelay = 200
+        upnp.discover()
+        upnp.selectigd()
 
-        external_ip = self.upnp.externalipaddress()
+        external_ip = upnp.externalipaddress()
         print(f"[*] IP Publique : {external_ip}")
-        return self.upnp
+        return upnp
 
-    def mapping_port(self):
-        if not self.upnp:
+    def mapping_port(self, upnp:miniupnpc):
+        if not upnp:
             raise RuntimeError("UPnP non initialisé. Appelez init_upnp() d'abord.")
-        self.upnp.addportmapping(
-            self.dport, self.protocol, self.upnp.lanaddr, self.sport, "Sileo", ""
+        upnp.addportmapping(
+            self.dport, self.protocol, upnp.lanaddr, self.sport, "Sileo", ""
         )
-        print(f"[*] Port {self.dport} redirigé vers {self.upnp.lanaddr}:{self.sport}")
+        print(f"[*] Port {self.dport} redirigé vers {upnp.lanaddr}:{self.sport}")
 
-    def check_mapping(self):
-        if not self.upnp:
+    def check_mapping(self,upnp:miniupnpc):
+        if not upnp:
             raise RuntimeError("UPnP non initialisé.")
         for i in range(10):
-            mapping = self.upnp.getspecificportmapping(i, self.protocol)
+            mapping = upnp.getspecificportmapping(i, self.protocol)
             if mapping:
                 print(f"[*] Port {i} : {mapping}")
 
-    def delete_mapping(self):
-        if not self.upnp:
+    def delete_mapping(self, upnp:miniupnpc):
+        if not upnp:
             raise RuntimeError("UPnP non initialisé.")
         self.upnp.deleteportmapping(self.dport, self.protocol)
         print(f"[*] Port {self.dport} fermé.")
