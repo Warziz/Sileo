@@ -35,7 +35,7 @@ class NetworkManager:
         upnp.selectigd()
 
         external_ip = upnp.externalipaddress()
-        print(f"[*] IP Publique : {external_ip}")
+        print(color_text(f"[*] IP Publique : {external_ip}","yellow"))
         return upnp
 
     def mapping_port(self, upnp: miniupnpc):
@@ -44,7 +44,7 @@ class NetworkManager:
         upnp.addportmapping(
             self.dport, self.protocol, upnp.lanaddr, self.sport, "Sileo", ""
         )
-        print(f"[*] Port {self.dport} redirigé vers {upnp.lanaddr}:{self.sport}")
+        print(color_text(f"[*] Port {self.dport} redirigé vers {upnp.lanaddr}:{self.sport}","yellow"))
 
     def check_mapping(self, upnp: miniupnpc):
         if not upnp:
@@ -52,13 +52,13 @@ class NetworkManager:
         for i in range(10):
             mapping = upnp.getspecificportmapping(i, self.protocol)
             if mapping:
-                print(f"[*] Port {i} : {mapping}")
+                print(color_text(f"[*] Port {i} : {mapping}","yellow"))
 
     def delete_mapping(self, upnp: miniupnpc):
         if not upnp:
             raise RuntimeError("UPnP non initialisé.")
         self.upnp.deleteportmapping(self.dport, self.protocol)
-        print(f"[*] Port {self.dport} fermé.")
+        print(color_text(f"[*] Port {self.dport} fermé.","yellow"))
 
     # -------- Hole Punching Functions -------- #
     def hole_punching(self, ip: str):
