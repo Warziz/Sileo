@@ -3,9 +3,6 @@ import json
 from Crypto.Util import number
 
 
-# know_port = 50002
-
-
 def gen_prime(keylenght=2048):
     return number.getPrime(keylenght)
 
