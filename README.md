@@ -21,8 +21,9 @@
 
 ## 📦 **Installation**
 ```bash
-git clone https://github.com/tonpseudo/sileo.git
+git clone https://github.com/Warziz/sileo.git
 cd sileo
+pip3 install -r requirements.txt
 python3 agent.py [OPTIONS]
 ```
 
@@ -34,10 +35,10 @@ python3 agent.py [OPTIONS]
 | `--anonymous`        | `-a`     | flag  | `True`  | Utiliser un pseudonyme aléatoire (mode anonyme).                           |
 | `--search`           | `-s`     | `str` | *None*  | Rechercher un utilisateur avec qui discuter.                               |
 | `--username`         | `-u`     | `str` | *None*  | Choisir un pseudonyme personnalisé.                                        |
-| `--server_ip`        | `-srv`   | `str` | *None*  | IP du serveur de rendez-vous (doit être identique pour les deux contacts). |
-| `--server_port`      | `-srv_p` | `int` | *None*  | Port du serveur de rendez-vous.                                            |
-| `--source_port`      | `-sp`    | `int` | `50001` | Port source pour Hole Punching ou UPnP.                                    |
-| `--destination_port` | `-dp`    | `int` | `50002` | Port destination pour Hole Punching ou UPnP.                               |
+| `--server-ip`        | `-srv`   | `str` | *None*  | IP du serveur de rendez-vous (doit être identique pour les deux contacts). |
+| `--server-port`      | `-srv_p` | `int` | *None*  | Port du serveur de rendez-vous.                                            |
+| `--source-port`      | `-sp`    | `int` | `50001` | Port source pour Hole Punching ou UPnP.                                    |
+| `--destination-port` | `-dp`    | `int` | `50002` | Port destination pour Hole Punching ou UPnP.                               |
 
 ## 🚀 Exemples d’utilisation
 

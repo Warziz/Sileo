@@ -28,25 +28,25 @@ def arguments():
         help="Enter your pseudonyme or one will be generate",
     )
     parser.add_argument(
-        "--server_ip",
+        "--server-ip",
         "-srv",
         type=str,
         help="Choose your own RendezVous Server (be sure your contact use the same)",
     )
     parser.add_argument(
-        "--server_port",
-        "-srv_p",
+        "--server-port",
+        "-srv-p",
         type=int,
         help="Bind your own RendezVous Server port",
     )
     parser.add_argument(
-        "--source_port",
+        "--source-port",
         "-sp",
         type=int,
         help="Custom your source port for upnp or hole punching (50001 by default)",
     )
     parser.add_argument(
-        "--destination_port",
+        "--destination-port",
         "-dp",
         type=int,
         help="Custome your destination port for upnp or hole punching (50002 by default)",
