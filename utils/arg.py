@@ -14,12 +14,12 @@ def arguments():
     parser.add_argument(
         "--anonymous",
         "-a",
-        type=bool,
-        default="True",
+        action="store_true",
+        default=True,
         help="Connect to someone with false pseudonyme",
     )
     parser.add_argument(
-        "--search", "-s", type=str, help="Search for people you want t odiscuss with"
+        "--search", "-s", type=str, help="Search for people you want to discuss with"
     )
     parser.add_argument(
         "--username",
@@ -37,7 +37,7 @@ def arguments():
         "--server_port",
         "-srv_p",
         type=int,
-        help="Bind your the port of RendezVous Server",
+        help="Bind your own RendezVous Server port",
     )
     parser.add_argument(
         "--source_port",
