@@ -32,7 +32,7 @@ class Agent:
         self.server_port = server_port
         self.sport = source_port
         self.dport = destination_port
-
+        
         if self.server is None and self.server_port is None:
             self.server = "51.143.219.149"
             self.server_port = 55555
@@ -88,11 +88,11 @@ class Agent:
 
         sys.exit(0)
 
-    def format_data(self, status, username, dport, method):
+    def format_data(self, status, username, dport, method, search):
         """
         formatting data in dict for sending it to the RendezVous server
         """
-        data = dict(status=status, id=username, dport=dport, method=method)
+        data = dict(status=status, id=username, dport=dport, method=method, search=search)
         return data
 
     def setup_hole_punching(self, data: dict) -> str:
@@ -113,11 +113,12 @@ class Agent:
 
         pubkey_payload = {"status": "pubkey", "method": "hole", "pubkey": dh_public}
         self.sock.sendto(json.dumps(pubkey_payload).encode(), self.rendezvous)
-
+        #insérer recherche user ici
         ready_payload = {
             "status": "ready",
             "method": "hole",
             "username": self.username,
+            "search": self.search,
             "sport": self.sport,
         }
         self.sock.sendto(json.dumps(ready_payload).encode(), self.rendezvous)
@@ -224,6 +225,7 @@ class Agent:
                     username=self.username,
                     dport=None,
                     method=self.method,
+                    search=self.search
                 )
                 client_username, aes_key = self.setup_hole_punching(data)
             elif self.method == "upnp":
@@ -232,6 +234,7 @@ class Agent:
                     username=self.username,
                     dport=self.dport,
                     method=self.method,
+                    search=self.search
                 )
 
                 client_username, aes_key = self.setup_upnp(data)

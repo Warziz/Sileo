@@ -37,7 +37,7 @@ def parser(data: bytes, address: tuple) -> dict:
 
     return decoded_data
 
-def check_username(client_data:dict):
+def find_username(client_data:dict):
     pass
 
 def get_conn(sock: socket.socket, p: int, info: dict, address: tuple):
@@ -56,33 +56,25 @@ def get_conn(sock: socket.socket, p: int, info: dict, address: tuple):
             print(f"[-] Clé publique manquante pour {address}")
         #faire le check des utilisateurs recherché ici.
         sock.sendto(b"ready", address)
-        if info["method"] == "hole":
-            client_data = {
-                "ip_pub": info["ip_pub"], 
-                "sport": info["sport"], 
-                "username": info["username"], 
-                "search": info["search"],
-                "pubkey": pubkey
-            }
-            clients.append(client_data)
-            print(clients)
-        else:
-            client_data = {
-                "ip_pub": info["ip_pub"], 
-                "sport": info["dport"], 
-                "username": info["username"], 
-                "search": info["search"],
-                "pubkey": pubkey
-            }
-            clients.append(client_data)
+        
+        client_data = {
+            "ip_pub": info["ip_pub"], 
+            "port": info["sport"] if info["method"] == "hole" else info["dport"], 
+            "username": info["username"], 
+            "search": info["search"],
+            "pubkey": pubkey
+        }
+        clients.append(client_data)
+        print(clients)
+ 
 
         if len(clients) >= 2:
             data1, data2 = clients.pop(0), clients.pop(0)
 
             # Envoie des infos croisées
             # Format: IP, port, public_key, username
-            msg1 = f"{data2["ip_pub"]} {data2["sport"]} {data2["pubkey"]} {data2["username"]}"
-            msg2 = f"{data1["ip_pub"]} {data1["sport"]} {data1["pubkey"]} {data1["username"]}"
+            msg1 = f"{data2["ip_pub"]} {data2["port"]} {data2["pubkey"]} {data2["username"]}"
+            msg2 = f"{data1["ip_pub"]} {data1["port"]} {data1["pubkey"]} {data1["username"]}"
             sock.sendto(msg1.encode(), (data1["ip_pub"],data1["sport"]))
             sock.sendto(msg2.encode(), (data2["ip_pub"],data2["sport"]))
 

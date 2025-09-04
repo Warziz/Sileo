@@ -15,9 +15,10 @@ def arguments():
         "--anonymous",
         "-a",
         action="store_true",
-        default=True,
+        default=False,
         help="Connect to someone with false pseudonyme",
     )
+    #Si cette option est remplit alors l'utilisateur doit fournir un pseudo
     parser.add_argument(
         "--search", "-s", type=str, help="Search for people you want to discuss with"
     )
