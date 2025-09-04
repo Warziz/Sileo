@@ -37,8 +37,11 @@ def parser(data: bytes, address: tuple) -> dict:
 
     return decoded_data
 
-def find_username(client_data:dict):
-    pass
+def find_username(username:str, searcher_username:str):
+    for client in clients:
+        if client["username"] == username and client["search"] == searcher_username:
+            return client
+    return None
 
 def get_conn(sock: socket.socket, p: int, info: dict, address: tuple):
     if info["status"] == "check":
