@@ -1,9 +1,8 @@
-mod arg;
+mod utils;
 mod config;
-mod connection;
 
-use arg::parse_args;
-use config::Config;
+use utils::arg::parse_args;
+use config::config::Config;
 
 fn main() {
 

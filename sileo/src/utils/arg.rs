@@ -1,7 +1,7 @@
 extern crate argparse;
 use argparse::{ArgumentParser, StoreTrue, StoreOption};
 
-use crate::connection::ConnectionMethod;
+use crate::utils::connection::ConnectionMethod;
 
 pub struct CliOptions {
     pub method : Option<ConnectionMethod>, 

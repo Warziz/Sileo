@@ -1,8 +1,8 @@
 
 use std::net::IpAddr;
 
-use crate::arg::CliOptions;
-use crate::connection::ConnectionMethod;
+use crate::utils::arg::CliOptions;
+use crate::utils::connection::ConnectionMethod;
 
 #[derive(Debug)]
 pub struct Config {
