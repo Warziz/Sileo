@@ -27,13 +27,13 @@ impl Config {
             return Err("Invalid server port".into());
         }
 
-        let source_port = cli.server_port.unwrap_or(50001);
+        let source_port = cli.source_port.unwrap_or(50001);
 
         if source_port == 0 {
             return Err("Invalid server port".into());
         }
 
-        let destination_port = cli.server_port.unwrap_or(50002);
+        let destination_port = cli.destination_port.unwrap_or(50002);
 
         if destination_port == 0 {
             return Err("Invalid server port".into());
