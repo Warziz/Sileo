@@ -3,11 +3,13 @@ use std::net::IpAddr;
 
 use crate::utils::arg::CliOptions;
 use crate::utils::connection::ConnectionMethod;
+use crate::utils::user::generate_username;
 
 #[derive(Debug)]
 pub struct Config {
     pub method: ConnectionMethod,
     pub anonymous: bool,
+    pub username: String,
     pub server_ip: IpAddr,
     pub server_port: u16,
     pub source_port: u16,
@@ -39,13 +41,21 @@ impl Config {
             return Err("Invalid server port".into());
         }
 
+        let username = if cli.anonymous {
+            generate_username()
+        } else {
+            cli.username.ok_or("Username  required when anonymous mode is disabled")?
+        };
+
         Ok(Self {
             method: cli.method.unwrap_or(ConnectionMethod::Both),
             anonymous: cli.anonymous,
+            username,
             server_ip,
             server_port,
             source_port,
             destination_port,
+
         })
     }
 }
