@@ -1,6 +1,7 @@
 use std::str::FromStr;
+use serde::{Deserialize,Serialize};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Deserialize,Serialize,Debug, Clone, Copy)]
 pub enum ConnectionMethod {
     Hole,
     Upnp,
