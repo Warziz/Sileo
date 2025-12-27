@@ -45,10 +45,31 @@ fn main() -> io::Result<()> {
     };
 
     let serialized_msg = serde_json::to_string(&msg)?;
+    let check_socket = socket.try_clone()?;
 
-    let stdout = Arc::new(Mutex::new(io::stdout()));
-
+    //sending check message
     println!("{}", serialized_msg);
+    let rendezvous_ip = format!("{}:{}",config.server_ip,config.server_port);
+    check_socket.send_to(serialized_msg.as_bytes(), rendezvous_ip).unwrap();
+
+    //sending crypto message
+    /*TO DO later*/
+
+    //sending ready message
+
+    let msg = Message {
+        msg_type:MessageType::Ready,
+        username: config.username.clone(),
+        destination_port: None,
+        method: config.method,
+    };
+
+    let serialized_msg = serde_json::to_string(&msg)?;
+    println!("{}",serialized_msg);
+
+
+    //protecting data for threading
+    let stdout = Arc::new(Mutex::new(io::stdout()));
 
     listener(
         config.username.clone(),  
