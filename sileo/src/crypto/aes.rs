@@ -2,7 +2,7 @@ use aes_gcm::{
     Aes256Gcm,
     Key,
     Nonce,
-    aead::{Aead, OsRn, rand_core::RngCore},
+    aead::{Aead, KeyInit, OsRng, rand_core::RngCore},
 };
 
 pub fn encrypt(key_bytes: &[u8;32], plaintext: &[u8]) -> (Vec<u8>, [u8; 12]){

@@ -5,6 +5,7 @@ pub struct KeyPair {
     pub public: PublicKey,
 }
 
+
 pub fn generate_keypair() -> KeyPair {
     let secret = EphemeralSecret::random();
     let public = PublicKey::from(&secret);

@@ -1,5 +1,6 @@
 mod utils;
 mod config;
+mod crypto;
 
 use std::{io, sync::{Arc, Mutex}};
 
@@ -7,6 +8,9 @@ use utils::arg::parse_args;
 use config::config::Config;
 use utils::network::{init_sock,listener,start_input_loop};
 use serde::{Deserialize,Serialize};
+use x25519_dalek::PublicKey;
+use crypto::crypto::{generate_keypair,derive_shared_key};
+use crypto::kdf::derive_aes_key;
 
 use crate::utils::connection::ConnectionMethod;
 
@@ -22,7 +26,8 @@ pub struct Message {
     pub msg_type: MessageType,
     pub username: String,
     pub destination_port: Option<u16>,
-    pub method: ConnectionMethod, 
+    pub method: ConnectionMethod,
+    pub pubkey: Option<PublicKey>, 
 }
 
 fn main() -> io::Result<()> {
@@ -42,6 +47,7 @@ fn main() -> io::Result<()> {
         username: config.username.clone(),
         destination_port: None,
         method: config.method,
+        pubkey: None,
     };
 
     let serialized_msg = serde_json::to_string(&msg)?;
@@ -53,7 +59,39 @@ fn main() -> io::Result<()> {
     check_socket.send_to(serialized_msg.as_bytes(), rendezvous_ip).unwrap();
 
     //sending crypto message
-    /*TO DO later*/
+    let crypto_socket = socket.try_clone()?;
+    let keypair =  generate_keypair();
+
+    let pubkey = keypair.public;
+
+    let msg = Message {
+        msg_type: MessageType::Pubkey,
+        username: config.username.clone(),
+        destination_port:None,
+        method: config.method,
+        pubkey: Some(keypair.public),
+    };
+
+    let mut buffer = [0u8; 4096];
+    let (size,addr) = crypto_socket.recv_from(&mut buffer)?;
+
+    //convert json to rust struct
+    let recv_msg: Message = serde_json::from_slice(&buffer[..size])?;
+    
+    //extract pubkey value
+    let peer_public = match recv_msg.pubkey {
+        Some(pk) => pk,
+        None => {
+            eprintln!("No public key in message");
+            return Ok(());
+        }
+    };
+
+    let shared = derive_shared_key(keypair.secret, &peer_public);
+    let aes_key = derive_aes_key(shared);
+
+
+    println!("Sending cryptographique message");
 
     //sending ready message
 
@@ -62,6 +100,7 @@ fn main() -> io::Result<()> {
         username: config.username.clone(),
         destination_port: None,
         method: config.method,
+        pubkey: None,
     };
 
     let serialized_msg = serde_json::to_string(&msg)?;
