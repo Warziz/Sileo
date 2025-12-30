@@ -23,7 +23,7 @@ pub enum MessageType {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
-    pub msg_type: MessageType,
+    pub status: MessageType,
     pub username: String,
     pub destination_port: Option<u16>,
     pub source_port: Option<u16>,
@@ -45,7 +45,7 @@ fn main() -> io::Result<()> {
 
     /*
     let msg = Message {
-        msg_type: MessageType::Check,
+        status: MessageType::Check,
         username: config.username.clone(),
         destination_port: None,
         source_port: None,
@@ -66,7 +66,7 @@ fn main() -> io::Result<()> {
     let keypair =  generate_keypair();
 
     let msg = Message {
-        msg_type: MessageType::Pubkey,
+        status: MessageType::Pubkey,
         username: config.username.clone(),
         destination_port:None,
         source_port: None,
@@ -102,7 +102,7 @@ fn main() -> io::Result<()> {
 
     //sending ready message
     let msg = Message {
-        msg_type:MessageType::Ready,
+        status:MessageType::Ready,
         username: config.username.clone(),
         destination_port: None,
         source_port: None,
