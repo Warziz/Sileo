@@ -117,6 +117,7 @@ fn main() -> io::Result<()> {
     //Wait for peer
     let peer_info = wait_for_peer(&ready_socket)?;
 
+    let peer_addr = format!("{}:{}",peer_info.0,peer_info.1);
     //protecting data for threading
     let stdout = Arc::new(Mutex::new(io::stdout()));
 
@@ -126,8 +127,7 @@ fn main() -> io::Result<()> {
         stdout.clone()
     );
 
-    let peer_addr = "127.0.0.1:50002";
-    start_input_loop(socket, peer_addr);
+    start_input_loop(socket, &peer_addr);
 
     Ok(())
 }

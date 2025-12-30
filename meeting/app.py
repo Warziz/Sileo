@@ -3,6 +3,7 @@ import json
 from Crypto.Util import number
 from collections import defaultdict
 
+"""
 def gen_prime(keylenght=2048):
     return number.getPrime(keylenght)
 
@@ -13,7 +14,7 @@ def generator(g=2):
         raise ValueError("Invalide Generator !")
     else:
         return g
-
+"""
 
 def init_sock():
     print("[*] Start listening")
@@ -45,8 +46,8 @@ def find_username(username:str, searcher_username:str):
 
 def get_conn(sock: socket.socket, p: int, info: dict, address: tuple):
     if info["status"] == "check":
-        g = generator()
-        sock.sendto(f"{p} {g}".encode(), address)
+        #g = generator()
+        sock.sendto(f"Ready for acquire pubkey".encode(), address)
 
     elif info["status"] == "pubkey":
         # Réception de la clé publique du client
@@ -87,16 +88,16 @@ def get_conn(sock: socket.socket, p: int, info: dict, address: tuple):
 clients = []  # Stocke (ip, port, username, public_key)
 pending_keys = {}  # address -> public_key temporairement
 
-def main(sock: socket.socket, p: int):
+def main(sock: socket.socket):
     while True:
         data, address = sock.recvfrom(4096)
         info = parser(data, address)
         print(f"[+] Reçu de {address}: {info}")
 
-        get_conn(sock, p, info, address)
+        get_conn(sock, info, address)
 
 
 if __name__ == "__main__":
-    p = gen_prime()
+
     sock = init_sock()
-    main(sock, p)
+    main(sock)
