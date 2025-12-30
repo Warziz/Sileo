@@ -45,12 +45,8 @@ def find_username(username:str, searcher_username:str):
     return None
 
 def get_conn(sock: socket.socket, p: int, info: dict, address: tuple):
-    if info["status"] == "check":
-        #g = generator()
-        print(f"Status check: {address}")
-        sock.sendto(f"Ready for acquire pubkey".encode(), address)
 
-    elif info["status"] == "pubkey":
+    if info["status"] == "pubkey":
         # Réception de la clé publique du client
         pending_keys[address] = info["pubkey"]
 
