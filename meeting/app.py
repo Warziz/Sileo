@@ -47,6 +47,7 @@ def find_username(username:str, searcher_username:str):
 def get_conn(sock: socket.socket, p: int, info: dict, address: tuple):
     if info["status"] == "check":
         #g = generator()
+        print(f"Status check: {address}")
         sock.sendto(f"Ready for acquire pubkey".encode(), address)
 
     elif info["status"] == "pubkey":
