@@ -43,6 +43,7 @@ fn main() -> io::Result<()> {
     let socket = init_sock(config.source_port)?;
     let recv_socket = socket.try_clone()?;
 
+    /*
     let msg = Message {
         msg_type: MessageType::Check,
         username: config.username.clone(),
@@ -54,11 +55,11 @@ fn main() -> io::Result<()> {
 
     let serialized_msg = serde_json::to_string(&msg)?;
     let check_socket = socket.try_clone()?;
+    */
 
     //sending check message
-    println!("{}", serialized_msg);
     let rendezvous_ip = format!("{}:{}",config.server_ip,config.server_port);
-    check_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
+    //check_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
 
     //prepare crypto message
     let crypto_socket = socket.try_clone()?;
@@ -77,10 +78,11 @@ fn main() -> io::Result<()> {
     println!("Sending cryptographique pubkey");
     let serialized_msg = serde_json::to_string(&msg)?;
     crypto_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
+    
     //recieve peer_pubkey
     let mut buffer = [0u8; 4096];
     let (size,addr) = crypto_socket.recv_from(&mut buffer)?;
-
+    println!("Pubkey Recieve");
     //convert json to rust struct
     let recv_msg: Message = serde_json::from_slice(&buffer[..size])?;
     
@@ -108,6 +110,7 @@ fn main() -> io::Result<()> {
         pubkey: None,
     };
 
+    
     let ready_socket = socket.try_clone()?;
     let serialized_msg = serde_json::to_string(&msg)?;
     ready_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
@@ -115,6 +118,7 @@ fn main() -> io::Result<()> {
 
 
     //Wait for peer
+    println!("Wait for peer");
     let peer_info = wait_for_peer(&ready_socket)?;
 
     let peer_addr = format!("{}:{}",peer_info.0,peer_info.1);
