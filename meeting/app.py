@@ -46,7 +46,7 @@ def find_username(username:str, searcher_username:str):
 
 def get_conn(sock: socket.socket, info: dict, address: tuple):
 
-    if info["status"] == "pubkey":
+    if info["status"] == "Pubkey":
         # Réception de la clé publique du client
         pending_keys[address] = info["pubkey"]
 
