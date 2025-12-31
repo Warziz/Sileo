@@ -50,7 +50,7 @@ def get_conn(sock: socket.socket, info: dict, address: tuple):
         # Réception de la clé publique du client
         pending_keys[address] = info["pubkey"]
 
-    elif info["status"] == "ready":
+    elif info["status"] == "Ready":
         # Vérifie si la clé publique a été reçue avant
         pubkey = pending_keys.get(address)
         if not pubkey:

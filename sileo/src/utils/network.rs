@@ -78,11 +78,13 @@ pub fn start_input_loop(socket: UdpSocket, peer_addr: &str) {
 pub fn wait_for_peer(
     socket: &UdpSocket,
 ) -> io::Result<(String, u16, PublicKey, String)> {
+    
+    println!("Wait for peer");
     let mut buf = [0u8; 4096];
 
     loop {
         let (len, _) = socket.recv_from(&mut buf)?;
-
+        println!("Data Recieved !");
         let data = str::from_utf8(&buf[..len]).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
