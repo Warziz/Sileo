@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 aes-gcm = "0.10.3"
 argparse = "0.2.2"
+base64 = "0.22.1"
 chrono = "0.4.42"
 hkdf = "0.12.4"
 serde = { version = "1.0.228", features = ["derive"] }

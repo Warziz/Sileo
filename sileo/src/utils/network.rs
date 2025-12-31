@@ -1,10 +1,13 @@
 use std::net::UdpSocket;
 use chrono::{DateTime, Utc};
+use x25519_dalek::PublicKey;
 use std::io::{self, Write};
 use std::thread;
 use std::sync::{Arc, Mutex};
 use std::str;
+use base64::{engine::general_purpose, Engine as _};
 
+use crate::crypto::crypto::generate_keypair;
 use crate::utils::user::color_text;
 
 pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
@@ -74,7 +77,7 @@ pub fn start_input_loop(socket: UdpSocket, peer_addr: &str) {
 
 pub fn wait_for_peer(
     socket: &UdpSocket,
-) -> io::Result<(String, u16, String, String)> {
+) -> io::Result<(String, u16, PublicKey, String)> {
     let mut buf = [0u8; 4096];
 
     loop {
@@ -112,7 +115,28 @@ pub fn wait_for_peer(
             )
         })?;
 
-        let pubkey_other = parts[2].to_string();
+        //decode pubkey b64 -> bytes
+        let pubkey_bytes = general_purpose::STANDARD
+            .decode(parts[2])
+            .map_err(|_| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData, 
+                    "Invalid base64 public key",
+                )
+            })?;
+
+        if pubkey_bytes.len() != 32 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Invalid public key length",
+            ));
+        }
+        
+        //reconstruct pubkey bytes -> Pubkey
+        let mut pubkey_array = [0u8;32];
+        pubkey_array.copy_from_slice(&pubkey_bytes);
+        let pubkey_other = PublicKey::from(pubkey_array);
+
         let peer_username = parts[3].to_string();
 
         return Ok((ip, sport, pubkey_other, peer_username));

@@ -11,6 +11,7 @@ use serde::{Deserialize,Serialize};
 use x25519_dalek::PublicKey;
 use crypto::crypto::{generate_keypair,derive_shared_key};
 use crypto::kdf::derive_aes_key;
+use base64::{engine::general_purpose, Engine as _};
 
 use crate::{crypto::aes, utils::connection::ConnectionMethod};
 
@@ -28,7 +29,7 @@ pub struct Message {
     pub destination_port: Option<u16>,
     pub source_port: Option<u16>,
     pub method: ConnectionMethod,
-    pub pubkey: Option<PublicKey>, 
+    pub pubkey: Option<String>, 
 }
 
 fn main() -> io::Result<()> {
@@ -65,13 +66,17 @@ fn main() -> io::Result<()> {
     let crypto_socket = socket.try_clone()?;
     let keypair =  generate_keypair();
 
+    let pubkey_b64 = general_purpose::STANDARD.encode(
+        keypair.public.as_bytes()
+    );
+
     let msg = Message {
         status: MessageType::Pubkey,
         username: config.username.clone(),
         destination_port:None,
         source_port: None,
         method: config.method,
-        pubkey: Some(keypair.public),
+        pubkey: Some(pubkey_b64),
     };
 
     //send pubkey
@@ -80,26 +85,12 @@ fn main() -> io::Result<()> {
     crypto_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
     
     //recieve peer_pubkey
-    let mut buffer = [0u8; 4096];
-    let (size,addr) = crypto_socket.recv_from(&mut buffer)?;
-    println!("Pubkey Recieve");
+    //let mut buffer = [0u8; 4096];
+    //let (size,addr) = crypto_socket.recv_from(&mut buffer)?;
+    //println!("Pubkey Recieve");
     //convert json to rust struct
-    let recv_msg: Message = serde_json::from_slice(&buffer[..size])?;
+    //let recv_msg: Message = serde_json::from_slice(&buffer[..size])?;
     
-    //extract pubkey value
-    let peer_public = match recv_msg.pubkey {
-        Some(pk) => pk,
-        None => {
-            eprintln!("No public key in message");
-            return Ok(());
-        }
-    };
-
-    //get aeskey
-    let shared = derive_shared_key(keypair.secret, &peer_public);
-    let aes_key = derive_aes_key(shared);
-    println!("AES Key {:?}",aes_key);
-
     //sending ready message
     let msg = Message {
         status:MessageType::Ready,
@@ -110,18 +101,36 @@ fn main() -> io::Result<()> {
         pubkey: None,
     };
 
-    
     let ready_socket = socket.try_clone()?;
     let serialized_msg = serde_json::to_string(&msg)?;
     ready_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
     println!("{}",serialized_msg);
 
+    /* 
+    //extract pubkey value
+    let peer_public = match recv_msg.pubkey {
+        Some(pk) => pk,
+        None => {
+            eprintln!("No public key in message");
+            return Ok(());
+        }
+    };
+    */
 
     //Wait for peer
     println!("Wait for peer");
     let peer_info = wait_for_peer(&ready_socket)?;
 
     let peer_addr = format!("{}:{}",peer_info.0,peer_info.1);
+    let peer_public = peer_info.2;
+
+    //get aeskey
+    let shared = derive_shared_key(keypair.secret, &peer_public);
+    let aes_key = derive_aes_key(shared);
+    println!("AES Key {:?}",aes_key);
+
+
+
     //protecting data for threading
     let stdout = Arc::new(Mutex::new(io::stdout()));
 
