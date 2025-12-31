@@ -95,8 +95,8 @@ fn main() -> io::Result<()> {
     let msg = Message {
         status:MessageType::Ready,
         username: config.username.clone(),
-        destination_port: None,
-        source_port: None,
+        destination_port: Some(config.destination_port),
+        source_port: Some(config.source_port),
         method: config.method,
         pubkey: None,
     };
