@@ -56,6 +56,7 @@ def get_conn(sock: socket.socket, info: dict, address: tuple):
         if not pubkey:
             print(f"[-] Clé publique manquante pour {address}")
         #faire le check des utilisateurs recherché ici.
+        print("Send ready message")
         sock.sendto(b"ready", address)
         
         client_data = {

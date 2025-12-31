@@ -118,7 +118,7 @@ fn main() -> io::Result<()> {
     */
 
     //Wait for peer
-    println!("Wait for peer");
+    
     let peer_info = wait_for_peer(&ready_socket)?;
 
     let peer_addr = format!("{}:{}",peer_info.0,peer_info.1);
