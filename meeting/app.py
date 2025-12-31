@@ -77,8 +77,8 @@ def get_conn(sock: socket.socket, info: dict, address: tuple):
             # Format: IP, port, public_key, username
             msg1 = f"{data2["ip_pub"]} {data2["port"]} {data2["pubkey"]} {data2["username"]}"
             msg2 = f"{data1["ip_pub"]} {data1["port"]} {data1["pubkey"]} {data1["username"]}"
-            sock.sendto(msg1.encode(), (data1["ip_pub"],data1["sport"]))
-            sock.sendto(msg2.encode(), (data2["ip_pub"],data2["sport"]))
+            sock.sendto(msg1.encode(), (data1["ip_pub"],data1["port"]))
+            sock.sendto(msg2.encode(), (data2["ip_pub"],data2["port"]))
 
             print(f"[*] Clients connectés via {info['method']}")
 
