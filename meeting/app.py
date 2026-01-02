@@ -61,7 +61,7 @@ def get_conn(sock: socket.socket, info: dict, address: tuple):
         
         client_data = {
             "ip_pub": info["ip_pub"], 
-            "port": info["sport"] if info["method"] == "hole" else info["destination_port"], 
+            "port": info["sport"] if info["method"] == "Hole" else info["destination_port"], 
             "username": info["username"], 
             "search": info["search"],
             "pubkey": pubkey
