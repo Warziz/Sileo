@@ -94,10 +94,12 @@ pub fn wait_for_peer(
 
         let data = data.trim();
 
+        /* 
         if data == "ready" {
             println!("[*] Checked in with server, waiting");
             continue;
         }
+        */
 
         let parts: Vec<&str> = data.split_whitespace().collect();
 
@@ -140,6 +142,7 @@ pub fn wait_for_peer(
         let pubkey_other = PublicKey::from(pubkey_array);
 
         let peer_username = parts[3].to_string();
+        println!("{}, {}, {:?}, {}", ip, sport, pubkey_other, peer_username);
 
         return Ok((ip, sport, pubkey_other, peer_username));
     }
