@@ -1,4 +1,4 @@
-use std::net::{IpAddr, UdpSocket};
+use std::net::{UdpSocket};
 use chrono::{DateTime, Utc};
 use x25519_dalek::PublicKey;
 use std::io::{self, Write};
@@ -7,7 +7,6 @@ use std::sync::{Arc, Mutex};
 use std::str;
 use base64::{engine::general_purpose, Engine as _};
 
-use crate::crypto::crypto::generate_keypair;
 use crate::utils::user::color_text;
 
 pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
