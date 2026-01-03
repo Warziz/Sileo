@@ -131,19 +131,21 @@ fn main() -> io::Result<()> {
 
 
     //hole punching
-    let hole_socket = hole_punching(&peer_addr)?;
-    let recv_socket = hole_socket.try_clone()?;
+    hole_punching(&socket, &peer_addr)?;
+    let recv_socket = socket.try_clone()?;
 
     //protecting data for threading
     let stdout = Arc::new(Mutex::new(io::stdout()));
 
+    println!("\nStart listening");
     listener(
         config.username.clone(),  
         recv_socket, 
         stdout.clone()
     );
 
-    start_input_loop(hole_socket, &peer_addr);
+    println!("\nStart input");
+    start_input_loop(socket, &peer_addr);
 
     Ok(())
 }

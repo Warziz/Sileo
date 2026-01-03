@@ -18,15 +18,14 @@ pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
     Ok(socket)
 }
 
-pub fn hole_punching(peer_addr: &str) -> io::Result<UdpSocket> {
+pub fn hole_punching(socket: &UdpSocket, peer_addr: &str) -> io::Result<()> {
 
     print!("[*] Peer address: {}",peer_addr);
-    let socket = UdpSocket::bind("0.0.0.0:0")?;
-    
+
     let ctrl = "CTRL:PUNCH";
-    print!("[!] Punching Hole");
+    print!("\n[!] Punching Hole");
     socket.send_to(ctrl.as_bytes(), peer_addr)?;
-    Ok(socket)
+    Ok(())
 }
 
 
@@ -42,7 +41,7 @@ pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdo
                 if let Ok((len, _)) =  socket.recv_from(&mut buffer){
                     let data = String::from_utf8_lossy(&buffer[..len]);
                     
-                    if data == "CTRL:PUNCH"{
+                    if data.trim() == "CTRL:PUNCH"{
                         continue;
                     } else {
                         let utc_now : DateTime<Utc> = Utc::now();
