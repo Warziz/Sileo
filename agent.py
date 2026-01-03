@@ -34,9 +34,9 @@ class Agent:
         self.dport = destination_port
 
         if self.server is None and self.server_port is None:
-            self.server = "51.143.219.149"
+            self.server = "X.X.X.X" #Your Relay Server
             self.server_port = 55555
-            self.rendezvous = ("51.143.219.149", 55555)
+            self.rendezvous = ("X.X.X.X", 55555)
         else:
             self.rendezvous = (server_ip, server_port)
 
