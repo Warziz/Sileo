@@ -5,13 +5,13 @@ mod crypto;
 use std::{io, sync::{Arc, Mutex}};
 
 use utils::arg::parse_args;
-use config::config::Config;
 use utils::network::{init_sock,listener,start_input_loop, wait_for_peer, hole_punching};
-use serde::{Deserialize,Serialize};
+use config::config::Config;
 use crypto::crypto::{generate_keypair,derive_shared_key};
 use crypto::kdf::derive_aes_key;
-use base64::{engine::general_purpose, Engine as _};
 
+use serde::{Deserialize,Serialize};
+use base64::{engine::general_purpose, Engine as _};
 use crate::{crypto::aes, utils::{connection::ConnectionMethod, user::color_text}};
 
 #[derive(Serialize, Deserialize, Debug)]

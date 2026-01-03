@@ -13,6 +13,7 @@ pub fn generate_keypair() -> KeyPair {
     KeyPair {secret,public}
 }
 
+
 pub fn derive_shared_key(my_secret: EphemeralSecret, peer_public: &PublicKey) -> SharedSecret {
     my_secret.diffie_hellman(peer_public)
 }

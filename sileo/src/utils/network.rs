@@ -1,10 +1,11 @@
 use std::net::{UdpSocket};
-use chrono::{DateTime, Utc};
-use x25519_dalek::PublicKey;
 use std::io::{self, Write};
 use std::thread;
 use std::sync::{Arc, Mutex};
 use std::str;
+
+use chrono::{DateTime, Utc};
+use x25519_dalek::PublicKey;
 use base64::{engine::general_purpose, Engine as _};
 
 use crate::utils::user::color_text;
@@ -27,7 +28,6 @@ pub fn hole_punching(socket: &UdpSocket, peer_addr: &str) -> io::Result<()> {
     socket.send_to(ctrl.as_bytes(), peer_addr)?;
     Ok(())
 }
-
 
 
 pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdout>>) {

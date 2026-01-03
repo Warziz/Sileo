@@ -5,6 +5,7 @@ use aes_gcm::{
     aead::{Aead, KeyInit, OsRng, rand_core::RngCore},
 };
 
+
 pub fn encrypt(key_bytes: &[u8;32], plaintext: &[u8]) -> (Vec<u8>, [u8; 12]){
 
     let key = Key::<Aes256Gcm>::from_slice(key_bytes);
@@ -20,6 +21,7 @@ pub fn encrypt(key_bytes: &[u8;32], plaintext: &[u8]) -> (Vec<u8>, [u8; 12]){
 
     (ciphertext, nonce_bytes)
 }
+
 
 pub fn decrypt(
     key_bytes: &[u8; 32],
