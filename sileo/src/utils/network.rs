@@ -1,4 +1,4 @@
-use std::net::UdpSocket;
+use std::net::{IpAddr, UdpSocket};
 use chrono::{DateTime, Utc};
 use x25519_dalek::PublicKey;
 use std::io::{self, Write};
@@ -17,6 +17,18 @@ pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
     socket.set_nonblocking(false)?; 
     Ok(socket)
 }
+
+pub fn hole_punching(peer_addr: &str) -> io::Result<UdpSocket> {
+
+    print!("[*] Peer address: {}",peer_addr);
+    let socket = UdpSocket::bind("0.0.0.0:0")?;
+    
+    let ctrl = "CTRL:PUNCH";
+    print!("[!] Punching Hole");
+    socket.send_to(ctrl.as_bytes(), peer_addr)?;
+    Ok(socket)
+}
+
 
 
 pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdout>>) {

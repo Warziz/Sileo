@@ -6,7 +6,7 @@ use std::{future::ready, io, sync::{Arc, Mutex}};
 
 use utils::arg::parse_args;
 use config::config::Config;
-use utils::network::{init_sock,listener,start_input_loop, wait_for_peer};
+use utils::network::{init_sock,listener,start_input_loop, wait_for_peer, hole_punching};
 use serde::{Deserialize,Serialize};
 use x25519_dalek::PublicKey;
 use crypto::crypto::{generate_keypair,derive_shared_key};
@@ -130,6 +130,9 @@ fn main() -> io::Result<()> {
     println!("AES Key {:?}",aes_key);
 
 
+    //hole punching
+    let hole_socket = hole_punching(&peer_addr)?;
+    let recv_socket = hole_socket.try_clone()?;
 
     //protecting data for threading
     let stdout = Arc::new(Mutex::new(io::stdout()));
@@ -140,7 +143,7 @@ fn main() -> io::Result<()> {
         stdout.clone()
     );
 
-    start_input_loop(socket, &peer_addr);
+    start_input_loop(hole_socket, &peer_addr);
 
     Ok(())
 }
