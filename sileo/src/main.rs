@@ -12,7 +12,7 @@ use crypto::kdf::derive_aes_key;
 
 use serde::{Deserialize,Serialize};
 use base64::{engine::general_purpose, Engine as _};
-use crate::{crypto::aes, utils::{connection::ConnectionMethod, user::color_text}};
+use crate::{utils::{connection::ConnectionMethod, user::color_text}};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum MessageType {
@@ -102,13 +102,17 @@ fn main() -> io::Result<()> {
     let stdout = Arc::new(Mutex::new(io::stdout()));
 
     println!("{}",color_text("[+] Sequence complete: press ENTER or send a message", "green"));
+    
+    start_input_loop(socket, &peer_addr, &aes_key);
+    
     listener(
         config.username.clone(),  
         recv_socket, 
-        stdout.clone()
+        stdout.clone(),
+        aes_key
     );
 
-    start_input_loop(socket, &peer_addr);
+    
 
     Ok(())
 }

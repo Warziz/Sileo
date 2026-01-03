@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use x25519_dalek::PublicKey;
 use base64::{engine::general_purpose, Engine as _};
 
+use crate::crypto::aes::{decrypt, encrypt};
 use crate::utils::user::color_text;
 
 pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
@@ -30,7 +31,7 @@ pub fn hole_punching(socket: &UdpSocket, peer_addr: &str) -> io::Result<()> {
 }
 
 
-pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdout>>) {
+pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdout>>, aes_key: [u8; 32]) {
 
     thread::spawn(move || {
 
@@ -38,10 +39,29 @@ pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdo
     
             loop {
 
-                if let Ok((len, _)) =  socket.recv_from(&mut buffer){
-                    let data = String::from_utf8_lossy(&buffer[..len]);
-                    
-                    if data.trim() == "CTRL:PUNCH"{
+                if let Ok((len, _)) = socket.recv_from(&mut buffer){
+                    let data = &buffer[..len];
+                    //Get nonce & cipher_text
+                    let (nonce_slice, ciphertext) = data.split_at(12);
+                    let nonce: [u8; 12] = match nonce_slice.try_into() {
+                        Ok(n) => n,
+                        Err(_) => {
+                            eprintln!("Invalid nonce length");
+                            continue;
+                        }
+                    };
+
+                    //decipher the message
+                    let plain = decrypt(&aes_key, ciphertext, &nonce);
+                    let message = match String::from_utf8(plain) {
+                        Ok(m) => m,
+                        Err(_) => {
+                            eprintln!("Invalid UTF-8 in decrypted message");
+                            return;
+                        }
+                    };
+
+                    if message.trim() == "CTRL:PUNCH"{
                         continue;
                     } else {
                         let utc_now : DateTime<Utc> = Utc::now();
@@ -56,7 +76,7 @@ pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdo
                             out,
                             "{}\n",
                             color_text(
-                                &format!("[{}] - peer > {}", utc_now, data.trim()),
+                                &format!("[{}] - peer > {}", utc_now, message.trim()),
                                 "cyan"
                             )
                         ).unwrap();
@@ -81,7 +101,7 @@ pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdo
 }
 
 
-pub fn start_input_loop(socket: UdpSocket, peer_addr: &str) {
+pub fn start_input_loop(socket: UdpSocket, peer_addr: &str, aes_key: &[u8; 32]) {
     let stdin = io::stdin();
     let mut input = String::new();
 
@@ -89,12 +109,15 @@ pub fn start_input_loop(socket: UdpSocket, peer_addr: &str) {
         input.clear();
         stdin.read_line(&mut input).unwrap();
 
-        let msg = input.trim_end();
+        let msg = input.trim_end().as_bytes();
         if msg.is_empty() {
             continue;
         }
-
-        socket.send_to(msg.as_bytes(), peer_addr).unwrap();
+        let (cipher_text,nonce) = encrypt( aes_key, msg);
+        let mut packet = Vec::new();
+        packet.extend_from_slice(&nonce);
+        packet.extend_from_slice(&cipher_text);
+        socket.send_to(&packet, peer_addr).unwrap();
     }
 }
 
