@@ -12,7 +12,7 @@ use crypto::crypto::{generate_keypair,derive_shared_key};
 use crypto::kdf::derive_aes_key;
 use base64::{engine::general_purpose, Engine as _};
 
-use crate::{crypto::aes, utils::connection::ConnectionMethod};
+use crate::{crypto::aes, utils::{connection::ConnectionMethod, user::color_text}};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum MessageType {
@@ -38,13 +38,13 @@ fn main() -> io::Result<()> {
     let config = Config::from_cli(cli_opts)
         .expect("Invalid configuration");
 
-    println!("Runtime config: {:?}", config);
+    let msg = format!("[*] Runtime config: {:?}", config);
+    println!("{}", color_text(&msg, "yellow"));
 
     let socket = init_sock(config.source_port)?;
 
     //sending check message
     let rendezvous_ip = format!("{}:{}",config.server_ip,config.server_port);
-    //check_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
 
     //prepare crypto message
     let crypto_socket = socket.try_clone()?;
@@ -64,7 +64,8 @@ fn main() -> io::Result<()> {
     };
 
     //send pubkey
-    println!("Sending cryptographique pubkey");
+    println!("{}",color_text("[*] Sending cryptographique pubkey to relay server","yellow"));
+    
     let serialized_msg = serde_json::to_string(&msg)?;
     crypto_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
     
@@ -84,7 +85,6 @@ fn main() -> io::Result<()> {
     println!("{}",serialized_msg);
 
     //Wait for peer
-    
     let peer_info = wait_for_peer(&ready_socket)?;
 
     let peer_addr = format!("{}:{}",peer_info.0,peer_info.1);
@@ -93,8 +93,6 @@ fn main() -> io::Result<()> {
     //get aeskey
     let shared = derive_shared_key(keypair.secret, &peer_public);
     let aes_key = derive_aes_key(shared);
-    println!("AES Key {:?}",aes_key);
-
 
     //hole punching
     hole_punching(&socket, &peer_addr)?;
@@ -103,14 +101,13 @@ fn main() -> io::Result<()> {
     //protecting data for threading
     let stdout = Arc::new(Mutex::new(io::stdout()));
 
-    println!("\nStart listening");
+    println!("{}",color_text("[+] Sequence complete: press ENTER or send a message", "green"));
     listener(
         config.username.clone(),  
         recv_socket, 
         stdout.clone()
     );
 
-    println!("\nStart input");
     start_input_loop(socket, &peer_addr);
 
     Ok(())

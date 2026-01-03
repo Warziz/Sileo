@@ -19,10 +19,11 @@ pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
 
 pub fn hole_punching(socket: &UdpSocket, peer_addr: &str) -> io::Result<()> {
 
-    print!("[*] Peer address: {}",peer_addr);
+    let msg = format!("[*] Peer address: {}", peer_addr);
+    println!("{}",color_text(&msg, "yellow"));
 
     let ctrl = "CTRL:PUNCH";
-    print!("\n[!] Punching Hole");
+    println!("{}", color_text("[!] Punching Hole", "magenta"));
     socket.send_to(ctrl.as_bytes(), peer_addr)?;
     Ok(())
 }
@@ -102,12 +103,12 @@ pub fn wait_for_peer(
     socket: &UdpSocket,
 ) -> io::Result<(String, u16, PublicKey, String)> {
     
-    println!("Wait for peer");
+    println!("{}", color_text("[*] Waiting for peer", "yellow"));
     let mut buf = [0u8; 4096];
 
     loop {
         let (len, _) = socket.recv_from(&mut buf)?;
-        println!("Data Recieved !");
+        println!("{}",color_text("[+] Data recieved from relay server", "green"));
         let data = str::from_utf8(&buf[..len]).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -116,13 +117,6 @@ pub fn wait_for_peer(
         })?;
 
         let data = data.trim();
-
-        /* 
-        if data == "ready" {
-            println!("[*] Checked in with server, waiting");
-            continue;
-        }
-        */
 
         let parts: Vec<&str> = data.split_whitespace().collect();
 
