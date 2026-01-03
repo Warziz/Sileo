@@ -46,34 +46,40 @@ pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdo
                     } else {
                         let utc_now : DateTime<Utc> = Utc::now();
                 
-                    let mut out = stdout.lock().unwrap();
-                
-                    write!(out, "\r{}", " ".repeat(80)).unwrap();
-                    write!(
-                        out,
-                        "\r{}\n",
-                        color_text(
-                            &format!("[{}] - peer > {}", utc_now, data),
-                            "cyan"
-                        )
-                    ).unwrap();
+                        let mut out = stdout.lock().unwrap();
 
-                    write!(
-                        out,
-                        "{}",
-                        color_text(
-                            &format!("[{}] - {}(you) > ", utc_now, username),
-                            "green"
-                        )
-                    ).unwrap();
+                        // clear current line
+                        write!(out, "\r\x1b[2K").unwrap();
 
-                    out.flush().unwrap();
+                        // print peer message
+                        write!(
+                            out,
+                            "{}\n",
+                            color_text(
+                                &format!("[{}] - peer > {}", utc_now, data.trim()),
+                                "cyan"
+                            )
+                        ).unwrap();
+
+                        // reprint prompt
+                        write!(
+                            out,
+                            "{}",
+                            color_text(
+                                &format!("[{}] - {}(you) > ", utc_now, username),
+                                "green"
+                            )
+                        ).unwrap();
+
+                        out.flush().unwrap();
+
                     }
                     
             }
         }
     });
 }
+
 
 pub fn start_input_loop(socket: UdpSocket, peer_addr: &str) {
     let stdin = io::stdin();
@@ -82,9 +88,16 @@ pub fn start_input_loop(socket: UdpSocket, peer_addr: &str) {
     loop {
         input.clear();
         stdin.read_line(&mut input).unwrap();
-        socket.send_to(input.as_bytes(), peer_addr).unwrap();
+
+        let msg = input.trim_end();
+        if msg.is_empty() {
+            continue;
+        }
+
+        socket.send_to(msg.as_bytes(), peer_addr).unwrap();
     }
 }
+
 
 pub fn wait_for_peer(
     socket: &UdpSocket,
