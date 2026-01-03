@@ -1,16 +1,12 @@
-
 import os
 import secrets
 import hashlib
-from binascii import hexlify
 
 
-from Crypto.Util import number
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
 class DiffieHellman:
-
     def __init__(self, p, generator=2, key_length=2048):
         self.min_key_length = 540
         self.default_key_length = key_length
@@ -25,7 +21,6 @@ class DiffieHellman:
         self.p = p
         self.private_key = self.gen_private_key(self.p)
 
-
     def gen_private_key(self, p):
         return secrets.randbelow(p - 2) + 2
 
@@ -37,7 +32,9 @@ class DiffieHellman:
 
     def derive_shared_key(self, other_key):
         self.shared_secret = self.gen_shared_secret(other_key)
-        shared_secret_bytes = self.shared_secret.to_bytes((self.shared_secret.bit_length() + 7) // 8, byteorder="big")
+        shared_secret_bytes = self.shared_secret.to_bytes(
+            (self.shared_secret.bit_length() + 7) // 8, byteorder="big"
+        )
         self.key = hashlib.sha256(shared_secret_bytes).digest()
 
     def get_key(self):
@@ -45,7 +42,6 @@ class DiffieHellman:
 
 
 class Cipher:
-
     @staticmethod
     def encrypt_message(aes_key: bytes, message: str) -> bytes:
         aesgcm = AESGCM(aes_key)
@@ -60,32 +56,3 @@ class Cipher:
         ciphertext = data[12:]
         plaintext = aesgcm.decrypt(nonce, ciphertext, None)
         return plaintext.decode()
-
-
-if __name__ == "__main__":
-
-
-    def gen_prime(key_length):
-        return number.getPrime(key_length)
-    
-    P = gen_prime(key_length=2048)
-
-    alice = DiffieHellman(p=P)
-    bob = DiffieHellman(p=P)
-    bob.p = alice.p  # Même P et G
-    bob.default_generator = alice.default_generator
-    bob.private_key = bob.gen_private_key(bob.p)
-
-    alice_public = alice.get_public_key()
-    bob_public = bob.get_public_key()
-
-    alice.derive_shared_key(bob_public)
-    bob.derive_shared_key(alice_public)
-
-    if alice.get_key() == bob.get_key():
-        print("Shared key match")
-        print("Key:", hexlify(alice.get_key()))
-    else:
-        print("Shared secrets didn't match")
-        print("Alice key:", hexlify(alice.get_key()))
-        print("Bob key:", hexlify(bob.get_key()))
