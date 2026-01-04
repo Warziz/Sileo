@@ -113,7 +113,7 @@ pub fn start_input_loop(socket: UdpSocket, peer_addr: &str, aes_key: &[u8; 32]) 
         if msg.is_empty() {
             continue;
         }
-        let (cipher_text,nonce) = encrypt( aes_key, msg);
+        let (cipher_text,nonce) = encrypt(aes_key, msg);
         let mut packet = Vec::new();
         packet.extend_from_slice(&nonce);
         packet.extend_from_slice(&cipher_text);

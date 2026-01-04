@@ -103,8 +103,6 @@ fn main() -> io::Result<()> {
 
     println!("{}",color_text("[+] Sequence complete: press ENTER or send a message", "green"));
     
-    start_input_loop(socket, &peer_addr, &aes_key);
-    
     listener(
         config.username.clone(),  
         recv_socket, 
@@ -112,7 +110,8 @@ fn main() -> io::Result<()> {
         aes_key
     );
 
-    
+    start_input_loop(socket, &peer_addr, &aes_key);
+        
 
     Ok(())
 }
