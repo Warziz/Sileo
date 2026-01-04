@@ -25,8 +25,12 @@ pub fn hole_punching(socket: &UdpSocket, peer_addr: &str) -> io::Result<()> {
     println!("{}",color_text(&msg, "yellow"));
 
     let ctrl = "CTRL:PUNCH";
+    let mut packet = Vec::new();
+    packet.push(0x02);
+    packet.extend_from_slice(ctrl.as_bytes());
+
     println!("{}", color_text("[!] Punching Hole", "magenta"));
-    socket.send_to(ctrl.as_bytes(), peer_addr)?;
+    socket.send_to(&packet, peer_addr)?;
     Ok(())
 }
 
@@ -41,58 +45,59 @@ pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdo
 
                 if let Ok((len, _)) = socket.recv_from(&mut buffer){
                     let data = &buffer[..len];
-                    //Get nonce & cipher_text
-                    let (nonce_slice, ciphertext) = data.split_at(12);
-                    let nonce: [u8; 12] = match nonce_slice.try_into() {
-                        Ok(n) => n,
-                        Err(_) => {
-                            eprintln!("Invalid nonce length");
-                            continue;
-                        }
-                    };
-
-                    //decipher the message
-                    let plain = decrypt(&aes_key, ciphertext, &nonce);
-                    let message = match String::from_utf8(plain) {
-                        Ok(m) => m,
-                        Err(_) => {
-                            eprintln!("Invalid UTF-8 in decrypted message");
-                            return;
-                        }
-                    };
-
-                    if message.trim() == "CTRL:PUNCH"{
+                    
+                    if data.is_empty(){
                         continue;
-                    } else {
-                        let utc_now : DateTime<Utc> = Utc::now();
-                
-                        let mut out = stdout.lock().unwrap();
+                    }
+                    
+                    let msg_type = data[0];
 
-                        // clear current line
-                        write!(out, "\r\x1b[2K").unwrap();
+                    match msg_type {
+                        0x01 => {
+                            let payload = &data[1..];
+                            if payload.len() < 12 {
+                                continue;
+                            }
+                            //Get nonce & cipher_text
+                            let (nonce_slice, ciphertext) = data.split_at(13);
+                            let nonce: [u8; 12] = match nonce_slice.try_into() {
+                                Ok(n) => n,
+                                Err(_) => {
+                                    eprintln!("Invalid nonce length");
+                                    continue;
+                                }
+                            };
 
-                        // print peer message
-                        write!(
-                            out,
-                            "{}\n",
-                            color_text(
-                                &format!("[{}] - peer > {}", utc_now, message.trim()),
-                                "cyan"
-                            )
-                        ).unwrap();
+                            //decipher the message
+                            let plain = decrypt(&aes_key, ciphertext, &nonce);
+                            let message = match String::from_utf8(plain) {
+                                Ok(m) => m,
+                                    Err(_) => {
+                                    eprintln!("Invalid UTF-8 in decrypted message");
+                                    return;
+                                }
+                            };
+                        
+                            display_text(&username, &stdout, &message);
+                        
+                        }
 
-                        // reprint prompt
-                        write!(
-                            out,
-                            "{}",
-                            color_text(
-                                &format!("[{}] - {}(you) > ", utc_now, username),
-                                "green"
-                            )
-                        ).unwrap();
+                        0x02 => {
+                            let payload = &data[1..];
+                            let message = match std::str::from_utf8(payload) {
+                                Ok(m) => m,
+                                Err(_) => {
+                                    eprintln!("Invalid UTF-8 in CTRL message");
+                                    continue;
+                                }
+                            };
 
-                        out.flush().unwrap();
+                            if message.trim() == "CTRL:PUNCH" {
+                                continue;
+                            }
+                        }
 
+                        _ => continue,
                     }
                     
             }
@@ -115,6 +120,7 @@ pub fn start_input_loop(socket: UdpSocket, peer_addr: &str, aes_key: &[u8; 32]) 
         }
         let (cipher_text,nonce) = encrypt(aes_key, msg);
         let mut packet = Vec::new();
+        packet.push(0x01);
         packet.extend_from_slice(&nonce);
         packet.extend_from_slice(&cipher_text);
         socket.send_to(&packet, peer_addr).unwrap();
@@ -186,4 +192,35 @@ pub fn wait_for_peer(
 
         return Ok((ip, sport, pubkey_other, peer_username));
     }
+}
+
+
+fn display_text (username: &String, stdout : &Arc<Mutex<io::Stdout>>, message: &String) {
+
+    let utc_now : DateTime<Utc> = Utc::now();           
+    let mut out = stdout.lock().unwrap();
+
+    // clear current line
+    write!(out, "\r\x1b[2K").unwrap();
+
+    // print peer message
+    write!(
+        out,
+        "{}\n",
+        color_text(
+            &format!("[{}] - peer > {}", utc_now, message.trim()),
+            "cyan"
+        )
+            ).unwrap();
+    // reprint prompt
+    write!(
+        out,
+        "{}",
+        color_text(
+            &format!("[{}] - {}(you) > ", utc_now, username),
+            "green"
+        )
+            ).unwrap();
+
+        out.flush().unwrap();
 }
