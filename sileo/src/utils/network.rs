@@ -59,7 +59,7 @@ pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdo
                                 continue;
                             }
                             //Get nonce & cipher_text
-                            let (nonce_slice, ciphertext) = payload.split_at(13);
+                            let (nonce_slice, ciphertext) = payload.split_at(12);
                             let nonce: [u8; 12] = match nonce_slice.try_into() {
                                 Ok(n) => n,
                                 Err(_) => {
