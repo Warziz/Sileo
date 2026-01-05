@@ -1,10 +1,13 @@
 use std::io;
 use std::net::{UdpSocket};
 
+use crate::network::peer::PeerInfo;
 use crate::utils::user::color_text;
 
-pub fn hole_punching(socket: &UdpSocket, peer_addr: &str) -> io::Result<()> {
+pub fn hole_punching(socket: &UdpSocket, peer: &PeerInfo) -> io::Result<()> {
 
+
+    let peer_addr = format!("{}:{}",peer.peer_ip,peer.sport);
     let msg = format!("[*] Peer address: {}", peer_addr);
     println!("{}",color_text(&msg, "yellow"));
 

@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     //send pubkey
-    println!("{}",color_text("[*] Sending cryptographique pubkey to relay server","yellow"));
+    println!("{}",color_text("[*] Sending cryptographic pubkey to relay server","yellow"));
     
     let serialized_msg = serde_json::to_string(&msg)?;
     crypto_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
@@ -74,18 +74,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     //Wait for peer
     let peer = wait_for_peer(&ready_socket)?;
-    let peer_addr = format!("{}:{}",peer.peer_ip,peer.sport);
-    let peer_public = peer.peer_pubkey;
+    
 
     //get aeskey
-    let shared = derive_shared_key(keypair.secret, &peer_public);
+    let shared = derive_shared_key(keypair.secret, &peer.peer_pubkey);
     let aes_key = derive_aes_key(shared);
 
 
     match config.method {
         ConnectionMethod::Hole => {
             //hole punching
-            hole_punching(&socket, &peer_addr)?;
+            hole_punching(&socket, &peer)?;
         }
         ConnectionMethod::Upnp => {
             println!("pas la");
@@ -111,7 +110,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         aes_key
     );
 
-    start_input_loop(socket, &peer_addr, &aes_key);
+    start_input_loop(socket, &peer, &aes_key);
         
 
     Ok(())

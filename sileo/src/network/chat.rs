@@ -92,9 +92,10 @@ pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdo
 }
 
 
-pub fn start_input_loop(socket: UdpSocket, peer_addr: &str, aes_key: &[u8; 32]) {
+pub fn start_input_loop(socket: UdpSocket, peer: &PeerInfo, aes_key: &[u8; 32]) {
     let stdin = io::stdin();
     let mut input = String::new();
+    let peer_addr = format!("{}:{}",peer.peer_ip,peer.sport);
 
     loop {
         input.clear();
@@ -109,7 +110,7 @@ pub fn start_input_loop(socket: UdpSocket, peer_addr: &str, aes_key: &[u8; 32]) 
         packet.push(0x01);
         packet.extend_from_slice(&nonce);
         packet.extend_from_slice(&cipher_text);
-        socket.send_to(&packet, peer_addr).unwrap();
+        socket.send_to(&packet, &peer_addr).unwrap();
     }
 }
 
