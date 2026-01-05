@@ -1,37 +1,24 @@
 mod utils;
 mod config;
 mod crypto;
+mod network;
 
 use std::{io, sync::{Arc, Mutex}};
 
 use utils::arg::parse_args;
-use utils::network::{init_sock,listener,start_input_loop, wait_for_peer, hole_punching};
+use utils::message::{Message, MessageType};
+use network::chat::{init_sock,listener,start_input_loop, wait_for_peer};
+use network::hole_punching::hole_punching;
 use config::config::Config;
 use crypto::crypto::{generate_keypair,derive_shared_key};
 use crypto::kdf::derive_aes_key;
 
-use serde::{Deserialize,Serialize};
 use base64::{engine::general_purpose, Engine as _};
+
 use crate::{utils::{connection::ConnectionMethod, user::color_text}};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum MessageType {
-    Check,
-    Ready,
-    Pubkey,
-}
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Message {
-    pub status: MessageType,
-    pub username: String,
-    pub destination_port: Option<u16>,
-    pub source_port: Option<u16>,
-    pub method: ConnectionMethod,
-    pub pubkey: Option<String>, 
-}
-
-fn main() -> io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli_opts = parse_args();
 
@@ -69,6 +56,7 @@ fn main() -> io::Result<()> {
     let serialized_msg = serde_json::to_string(&msg)?;
     crypto_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
     
+
     //sending ready message
     let msg = Message {
         status:MessageType::Ready,
@@ -85,22 +73,35 @@ fn main() -> io::Result<()> {
     println!("{}",serialized_msg);
 
     //Wait for peer
-    let peer_info = wait_for_peer(&ready_socket)?;
-
-    let peer_addr = format!("{}:{}",peer_info.0,peer_info.1);
-    let peer_public = peer_info.2;
+    let peer = wait_for_peer(&ready_socket)?;
+    let peer_addr = format!("{}:{}",peer.peer_ip,peer.sport);
+    let peer_public = peer.peer_pubkey;
 
     //get aeskey
     let shared = derive_shared_key(keypair.secret, &peer_public);
     let aes_key = derive_aes_key(shared);
 
-    //hole punching
-    hole_punching(&socket, &peer_addr)?;
-    let recv_socket = socket.try_clone()?;
 
+    match config.method {
+        ConnectionMethod::Hole => {
+            //hole punching
+            hole_punching(&socket, &peer_addr)?;
+        }
+        ConnectionMethod::Upnp => {
+            println!("pas la");
+        }
+        ConnectionMethod::Both => {
+            println!("Pas encore la");
+        }
+    
+        _ => println!("Invalid method"),
+    
+    }
+
+
+    let recv_socket = socket.try_clone()?;
     //protecting data for threading
     let stdout = Arc::new(Mutex::new(io::stdout()));
-
     println!("{}",color_text("[+] Sequence complete: press ENTER or send a message", "green"));
     
     listener(
