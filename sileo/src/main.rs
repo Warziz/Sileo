@@ -10,10 +10,10 @@ use utils::message::{Message, MessageType};
 use network::chat::{init_sock,listener,start_input_loop, wait_for_peer};
 use network::hole_punching::hole_punching;
 use config::config::Config;
-use crypto::crypto::{derive_shared_key};
-use crypto::kdf::derive_aes_key;
+use crypto::crypto::{get_aes_key, prepare_pubkey};
 
-use crate::{crypto::crypto::prepare_pubkey, utils::{connection::ConnectionMethod, user::color_text}};
+
+use crate::{utils::{connection::ConnectionMethod, user::color_text}};
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     //prepare crypto message
     let crypto_socket = socket.try_clone()?;
-    let (pubkey_b64,keypair_secret) = prepare_pubkey();
+    let (pubkey_b64, keypair) = prepare_pubkey();
 
 
     let msg = Message {
@@ -62,14 +62,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ready_socket = socket.try_clone()?;
     let serialized_msg = serde_json::to_string(&msg)?;
     ready_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
-    println!("{}",serialized_msg);
 
     //Wait for peer
     let peer = wait_for_peer(&ready_socket)?;
     
     //get aeskey
-    let shared = derive_shared_key(keypair_secret, &peer.peer_pubkey);
-    let aes_key = derive_aes_key(shared);
+    let aes_key = get_aes_key(keypair,&peer);
 
     match config.method {
         ConnectionMethod::Hole => {
