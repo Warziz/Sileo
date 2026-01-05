@@ -10,12 +10,10 @@ use utils::message::{Message, MessageType};
 use network::chat::{init_sock,listener,start_input_loop, wait_for_peer};
 use network::hole_punching::hole_punching;
 use config::config::Config;
-use crypto::crypto::{generate_keypair,derive_shared_key};
+use crypto::crypto::{derive_shared_key};
 use crypto::kdf::derive_aes_key;
 
-use base64::{engine::general_purpose, Engine as _};
-
-use crate::{utils::{connection::ConnectionMethod, user::color_text}};
+use crate::{crypto::crypto::prepare_pubkey, utils::{connection::ConnectionMethod, user::color_text}};
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,17 +27,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", color_text(&msg, "yellow"));
 
     let socket = init_sock(config.source_port)?;
-
-    //sending check message
     let rendezvous_ip = format!("{}:{}",config.server_ip,config.server_port);
 
     //prepare crypto message
     let crypto_socket = socket.try_clone()?;
-    let keypair =  generate_keypair();
+    let (pubkey_b64,keypair_secret) = prepare_pubkey();
 
-    let pubkey_b64 = general_purpose::STANDARD.encode(
-        keypair.public.as_bytes()
-    );
 
     let msg = Message {
         status: MessageType::Pubkey,
@@ -52,7 +45,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     //send pubkey
     println!("{}",color_text("[*] Sending cryptographic pubkey to relay server","yellow"));
-    
     let serialized_msg = serde_json::to_string(&msg)?;
     crypto_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
     
@@ -75,11 +67,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //Wait for peer
     let peer = wait_for_peer(&ready_socket)?;
     
-
     //get aeskey
-    let shared = derive_shared_key(keypair.secret, &peer.peer_pubkey);
+    let shared = derive_shared_key(keypair_secret, &peer.peer_pubkey);
     let aes_key = derive_aes_key(shared);
-
 
     match config.method {
         ConnectionMethod::Hole => {

@@ -1,3 +1,4 @@
 .venv
 __pycache__
-/sileo/target/
+**/target/
+/sileo/Cargo.lock
