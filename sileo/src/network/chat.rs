@@ -21,11 +21,12 @@ pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
 }
 
 
-pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdout>>, aes_key: [u8; 32]) {
+pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdout>>, aes_key: [u8; 32], peer: Arc<PeerInfo>) {
 
     thread::spawn(move || {
 
         let mut buffer = [0; 1024];
+        let peer = Arc::clone(&peer);
     
             loop {
 
@@ -64,7 +65,7 @@ pub fn listener(username: String, socket: UdpSocket, stdout : Arc<Mutex<io::Stdo
                                 }
                             };
                         
-                            display_text(&username, &stdout, &message);
+                            display_text(&username, &stdout, &message, &peer);
                         
                         }
 
@@ -187,7 +188,7 @@ pub fn wait_for_peer(
 }
 
 
-fn display_text (username: &String, stdout : &Arc<Mutex<io::Stdout>>, message: &String) {
+fn display_text (username: &String, stdout : &Arc<Mutex<io::Stdout>>, message: &String, peer: &PeerInfo) {
 
     let utc_now : DateTime<Utc> = Utc::now();           
     let mut out = stdout.lock().unwrap();
@@ -200,7 +201,7 @@ fn display_text (username: &String, stdout : &Arc<Mutex<io::Stdout>>, message: &
         out,
         "{}\n",
         color_text(
-            &format!("[{}] - peer > {}", utc_now, message.trim()),
+            &format!("[{}] - {} > {}", utc_now, peer.peer_username, message.trim()),
             "cyan"
         )
             ).unwrap();

@@ -47,7 +47,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}",color_text("[*] Sending cryptographic pubkey to relay server","yellow"));
     let serialized_msg = serde_json::to_string(&msg)?;
     crypto_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
-    
 
     //sending ready message
     let msg = Message {
@@ -75,31 +74,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             hole_punching(&socket, &peer)?;
         }
         ConnectionMethod::Upnp => {
-            println!("pas la");
+            println!("{}", color_text("[-] This feature is not available", "red"));
         }
         ConnectionMethod::Both => {
-            println!("Pas encore la");
+            println!("{}", color_text("[-] This feature is not available", "red"));
         }
     
-        _ => println!("Invalid method"),
-    
     }
-
 
     let recv_socket = socket.try_clone()?;
     //protecting data for threading
     let stdout = Arc::new(Mutex::new(io::stdout()));
+    let peer = Arc::new(peer);
     println!("{}",color_text("[+] Sequence complete: press ENTER or send a message", "green"));
     
     listener(
         config.username.clone(),  
         recv_socket, 
         stdout.clone(),
-        aes_key
+        aes_key,
+        peer.clone()
     );
 
     start_input_loop(socket, &peer, &aes_key);
         
-
     Ok(())
 }

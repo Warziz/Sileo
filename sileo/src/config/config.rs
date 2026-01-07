@@ -8,7 +8,6 @@ use crate::utils::user::generate_username;
 #[derive(Debug)]
 pub struct Config {
     pub method: ConnectionMethod,
-    pub anonymous: bool,
     pub username: String,
     pub server_ip: IpAddr,
     pub server_port: u16,
@@ -49,7 +48,6 @@ impl Config {
 
         Ok(Self {
             method: cli.method.unwrap_or(ConnectionMethod::Both),
-            anonymous: cli.anonymous,
             username,
             server_ip,
             server_port,

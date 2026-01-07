@@ -32,6 +32,7 @@ pub fn prepare_pubkey () -> (String, KeyPair) {
     return (pubkey_b64, keypair);
 }
 
+
 pub fn get_aes_key (keypair: KeyPair, peer: &PeerInfo) -> [u8;32] {
 
     let shared = derive_shared_key(keypair.secret, &peer.peer_pubkey);
