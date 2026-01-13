@@ -2,11 +2,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn color_text(text: &str, color: &str) -> String {
     let code = match color {
-        "red" => "\033[91m",
-        "green" => "\033[92m",
-        "yellow" => "\033[93m",
-        "blue" => "\033[94m",
-        "magenta" => "\033[95m",
+        "red" => "\x1b[31m",
+        "cyan" => "\x1b[36m",
+        "green" => "\x1b[32m",
+        "yellow" => "\x1b[33m",
+        "blue" => "\x1b[34m",
+        "magenta" => "\x1b[35m", 
         _ => "",
     };
     format!("{}{}\x1b[0m", code, text)

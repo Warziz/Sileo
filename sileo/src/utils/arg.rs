@@ -35,7 +35,7 @@ pub fn parse_args() -> CliOptions {
             .add_option(&["-m","--method"], StoreOption,"Choose your connection method. By default the program will test both method if one fail. First method (hole) is with the hole punching (pure p2p). The second method is for upnp configuration.");
         
         app.refer(&mut options.anonymous)
-            .add_option(&["-a","--anonymous"], StoreTrue, "Connect to someone with false pseudonyme");
+            .add_option(&["-a","--anonymous"], StoreTrue, "Connect to someone with generate pseudonyme");
         
         app.refer(&mut options.search)
             .add_option(&["-s","--search"], StoreOption, "Search for people you want to discuss with");
@@ -56,10 +56,6 @@ pub fn parse_args() -> CliOptions {
             .add_option(&["-d","--destination-port"], StoreOption, "Custome your destination port for upnp or hole punching (50002 by default)");    
         app.parse_args_or_exit();    
     }
-
-    println!("Method: {:?}", options.method);
-    println!("Anonymous: {}", options.anonymous);
-    println!("Server IP: {:?}", options.server_ip);
 
     return options;
 }
