@@ -1,102 +1,32 @@
-mod utils;
-mod config;
-mod crypto;
-mod network;
+mod tui;
+mod messaging;
+mod app;
 
-use std::{io, sync::{Arc, Mutex}};
-
-use utils::arg::parse_args;
-use utils::message::{Message, MessageType};
-use network::chat::{init_sock,listener,start_input_loop, wait_for_peer};
-use network::hole_punching::hole_punching;
-use config::config::Config;
-use crypto::crypto::{get_aes_key, prepare_pubkey};
-
-
-use crate::{utils::{connection::ConnectionMethod, user::color_text}};
-
+use std::sync::mpsc::channel;
+use crate::app::App;
+use crate::messaging::client::MessagingClient;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // --- 1. Lancer le TUI ---
+    let mut app = App::new();
 
-    let cli_opts = parse_args();
+    // Le TUI va remplir cette config via l'écran Config
+    let config = app.run_until_config()?; // tu l’as déjà conceptuellement
 
-    let config = Config::from_cli(cli_opts)
-        .expect("Invalid configuration");
+    // --- 2. Channels ---
+    let (tx_to_backend, rx_to_backend) = channel::<String>();
+    let (tx_from_backend, rx_from_backend) = channel::<String>();
 
-    let msg = format!("[*] Runtime config: {:?}", config);
-    println!("{}", color_text(&msg, "yellow"));
+    // --- 3. Injecter dans le state ---
+    app.state.tx_backend = tx_to_backend;
+    app.state.rx_backend = rx_from_backend;
 
-    let socket = init_sock(config.source_port)?;
-    let rendezvous_ip = format!("{}:{}",config.server_ip,config.server_port);
+    // --- 4. Lancer le backend (TES fonctions existantes) ---
+    let client = MessagingClient::new(config, incoming, outgoing)?;
+    client.start();
 
-    //prepare crypto message
-    let crypto_socket = socket.try_clone()?;
-    let (pubkey_b64, keypair) = prepare_pubkey();
+    // --- 5. Lancer la boucle principale TUI ---
+    app.run_chat_loop()?;
 
-
-    let msg = Message {
-        status: MessageType::Pubkey,
-        username: config.username.clone(),
-        destination_port:None,
-        source_port: None,
-        method: config.method,
-        pubkey: Some(pubkey_b64),
-    };
-
-    //send pubkey
-    println!("{}",color_text("[*] Sending cryptographic pubkey to relay server","yellow"));
-    let serialized_msg = serde_json::to_string(&msg)?;
-    crypto_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
-
-    //sending ready message
-    let msg = Message {
-        status:MessageType::Ready,
-        username: config.username.clone(),
-        destination_port: Some(config.destination_port),
-        source_port: Some(config.source_port),
-        method: config.method,
-        pubkey: None,
-    };
-
-    let ready_socket = socket.try_clone()?;
-    let serialized_msg = serde_json::to_string(&msg)?;
-    ready_socket.send_to(serialized_msg.as_bytes(), &rendezvous_ip).unwrap();
-
-    //Wait for peer
-    let peer = wait_for_peer(&ready_socket)?;
-    
-    //get aeskey
-    let aes_key = get_aes_key(keypair,&peer);
-
-    match config.method {
-        ConnectionMethod::Hole => {
-            //hole punching
-            hole_punching(&socket, &peer)?;
-        }
-        ConnectionMethod::Upnp => {
-            println!("{}", color_text("[-] This feature is not available", "red"));
-        }
-        ConnectionMethod::Both => {
-            println!("{}", color_text("[-] This feature is not available", "red"));
-        }
-    
-    }
-
-    let recv_socket = socket.try_clone()?;
-    //protecting data for threading
-    let stdout = Arc::new(Mutex::new(io::stdout()));
-    let peer = Arc::new(peer);
-    println!("{}",color_text("[+] Sequence complete: press ENTER or send a message", "green"));
-    
-    listener(
-        config.username.clone(),  
-        recv_socket, 
-        stdout.clone(),
-        aes_key,
-        peer.clone()
-    );
-
-    start_input_loop(socket, &peer, &aes_key);
-        
     Ok(())
 }
