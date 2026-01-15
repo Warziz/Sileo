@@ -1,6 +1,5 @@
 use crate::app::state::{AppState, Screen};
 use crate::messaging::utils::connection::ConnectionMethod;
-use crate::messaging::config::Config;
 
 
 impl AppState {

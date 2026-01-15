@@ -3,31 +3,35 @@ mod messaging;
 mod app;
 
 use std::sync::mpsc::channel;
+
 use crate::app::App;
 use crate::messaging::client::MessagingClient;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     
-    // run TUI
-    let mut app = App::new();
-
-    // Le TUI va remplir cette config via l'écran Config
-    let config = app.run_until_config()?; // tu l’as déjà conceptuellement
-
-    // --- 2. Channels ---
+    // 1. Créer les channels
     let (tx_to_backend, rx_to_backend) = channel::<String>();
     let (tx_from_backend, rx_from_backend) = channel::<String>();
 
-    // --- 3. Injecter dans le state ---
-    app.state.tx_backend = tx_to_backend;
-    app.state.rx_backend = rx_from_backend;
+    // 2. Lancer le TUI
+    let mut app = App::new(tx_to_backend, rx_from_backend);
 
-    // --- 4. Lancer le backend (TES fonctions existantes) ---
-    let client = MessagingClient::new(config, incoming, outgoing)?;
-    client.start();
+    color_eyre::install()?;
+    let terminal = ratatui::init();
+    app.run(terminal)?; // gère Welcome, Config, Chat
 
-    // --- 5. Lancer la boucle principale TUI ---
-    app.run_chat_loop()?;
+    // 4. Quand l'utilisateur a validé la config
+    if let Some(config) = app.state.config.take() {
+        let mut client = MessagingClient::new(
+            config,
+            tx_from_backend.clone(),
+            rx_to_backend,
+        )?;
+
+        client.start();
+
+    }
 
     Ok(())
+
 }
