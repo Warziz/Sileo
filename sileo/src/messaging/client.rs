@@ -25,7 +25,7 @@ impl MessagingClient {
         config: Config, 
         incoming: Sender<String>,
         outgoing: Receiver<String>,
-    ) -> Result<Self> {
+    ) -> Result<Self, Box<dyn std::error::Error>> {
 
         let socket = init_sock(config.source_port)?;
         let rendezvous_ip = format!("{}:{}", config.server_ip, config.server_port);
@@ -70,24 +70,27 @@ impl MessagingClient {
         })
     }
 
+    /*
     pub fn configure(&mut self, config: Config) {
-        self.config = Some(config);
+        self.config = config;
     }
-pub fn start(&self) {
+    */
+
+    pub fn start(&mut self) {
 
     let socket_recv = self.socket.try_clone().expect("clone socket failed");
     let socket_send = self.socket.try_clone().expect("clone socket failed");
 
     let peer = self.peer.clone();
-    let aes_key = self.aes_key.expect("missing aes key");
+    let aes_key = self.aes_key.clone();
 
     let incoming = self.incoming.clone();
-    let outgoing = self.outgoing.clone();
+    let outgoing = self.outgoing.take().expect("outgoing already taken");
 
     // Thread réception
     {
         let peer = Arc::clone(&peer);
-        let aes_key = aes_key;
+        let aes_key = Arc::clone(&aes_key);
         let incoming = incoming;
 
         thread::spawn(move || {
@@ -98,7 +101,7 @@ pub fn start(&self) {
     // Thread envoi
     {
         let peer = Arc::clone(&peer);
-        let aes_key = aes_key;
+        let aes_key = Arc::clone(&aes_key);
 
         thread::spawn(move || {
             while let Ok(msg) = outgoing.recv() {
