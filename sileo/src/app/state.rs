@@ -1,4 +1,6 @@
-use crate::tui::domain::connection::ConnectionMethod;
+use crate::messaging::utils::connection::ConnectionMethod;
+use crate::messaging::config::Config;
+
 use std::sync::mpsc::{Receiver, Sender, channel};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -32,6 +34,8 @@ pub struct AppState {
     pub destination_port: String,
 
     pub selected_field: usize,
+    pub config: Option<Config>,
+    pub error_message: Option<String>,
 
     pub tx_backend: Sender<String>,
     pub rx_backend: Receiver<String>,
@@ -88,10 +92,44 @@ impl AppState {
             source_port: String::new(),
             destination_port: String::new(),
 
+            config: None,
+            error_message: None,
             selected_field: 11,
 
             tx_backend,
             rx_backend,
         }
     }
+
+    pub fn build_config(&self) -> Result<Config, String> {
+
+        let server_port = self.server_port
+            .parse::<u16>()
+            .map_err(|_| "Invalid server port")?;
+
+        let source_port = self.source_port
+            .parse::<u16>()
+            .map_err(|_| "Invalid source port")?;
+
+        let destination_port = self.destination_port
+            .parse::<u16>()
+            .map_err(|_| "Invalid destination port")?;
+
+        let username = if self.username.trim().is_empty() {
+            None
+        } else {
+            Some(self.username.clone())
+        };
+
+        Config::validate(
+            self.method,
+            self.anonymous,
+            username,
+            self.server_ip.clone(),
+            server_port,
+            source_port,
+            destination_port,
+        )
+    }
+
 }

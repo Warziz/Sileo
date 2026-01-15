@@ -1,11 +1,5 @@
 use crate::app::{state::AppState};
-
-#[derive(Clone, Copy, Debug)]
-pub enum ConnectionMethod {
-    Hole,
-    Upnp,
-    Both,
-}
+use crate::messaging::utils::connection::ConnectionMethod;
 
 pub fn method_to_string(state: &mut AppState) -> &str {
     match state.method { 

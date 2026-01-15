@@ -1,33 +1,21 @@
 use crate::app::state::{AppState, Screen};
-use crate::tui::domain::connection::ConnectionMethod;
+use crate::messaging::utils::connection::ConnectionMethod;
 use crate::messaging::config::Config;
 
 
 impl AppState {
 
     pub fn start_chat(&mut self) {
-        let config = match Config::validate(
-            self.method,
-            self.anonymous,
-            if self.username.is_empty() {
-                None
-            } else {
-                Some(self.username.clone())
-            },
-            self.server_ip.clone(),
-            self.server_port.parse().unwrap_or(0),
-            self.source_port.parse().unwrap_or(0),
-            self.destination_port.parse().unwrap_or(0),
-        ) {
-            Ok(cfg) => cfg,
-            Err(e) => {
-                self.error_message = Some(e);
-                return;
+        
+        match self.build_config() {
+            Ok(config) => {
+                self.config = Some(config);
+                self.screen = Screen::Chat;
             }
-        };
-
-        self.messaging_config = Some(config);
-        self.screen = Screen::Chat;
+            Err(err) => {
+                self.error_message = Some(err);
+            }
+        }
     }
 
     pub fn quit_to_welcome(&mut self) {

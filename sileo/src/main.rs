@@ -7,7 +7,8 @@ use crate::app::App;
 use crate::messaging::client::MessagingClient;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // --- 1. Lancer le TUI ---
+    
+    // run TUI
     let mut app = App::new();
 
     // Le TUI va remplir cette config via l'écran Config

@@ -1,7 +1,6 @@
 use std::net::{UdpSocket};
 use std::io::{self, Write};
 use std::sync::mpsc::Sender;
-use std::thread;
 use std::sync::{Arc, Mutex};
 use std::str;
 
