@@ -1,3 +1,5 @@
+use std::thread;
+
 use crate::app::state::{AppState, Screen};
 use crate::messaging::utils::connection::ConnectionMethod;
 use crate::messaging::client::MessagingClient;
@@ -8,20 +10,32 @@ impl AppState {
         
         match self.build_config() {
             Ok(config) => {
-                let mut client = MessagingClient::new(
-                    config,
-                    self.tx_from_backend.clone(),
-                    self.rx_to_backend.take().expect("Backend init failed"),
-                ).expect("Backend init failed");
 
-                client.start();
                 self.screen = Screen::Chat;
-            }
-            Err(err) => {
-                self.error_message = Some(err);
-            }
+
+                let tx_logs = self.tx_from_backend.clone();
+                let rx_backend = self.rx_to_backend.take().expect("Backend already started");
+
+                thread::spawn(move || {
+                    tx_logs.send("[INFO] Backend starting...".into()).ok();
+
+                    match MessagingClient::new(config, tx_logs.clone(), rx_backend){
+                        Ok(mut client) => {
+                            tx_logs.send("[INFO] Connected to peer".into()).ok();
+                            client.start();
+                        }
+                        Err(err) => {
+                            tx_logs.send(format!("[ERROR] {}",err)).ok();
+                        }
+                    }
+
+                });
+        }
+        Err(err) => {
+            self.error_message = Some(err);
         }
     }
+}
 
     pub fn quit_to_welcome(&mut self) {
         self.screen = Screen::Welcome;
