@@ -9,7 +9,7 @@ pub fn hole_punching(socket: &UdpSocket, peer: &PeerInfo, incoming: &Sender<Stri
 
 
     let peer_addr = format!("{}:{}",peer.peer_ip,peer.sport);
-    let msg = format!("[*] Peer address: {}", peer_addr);
+    let msg = format!("[INFO] Peer address: {}", peer_addr);
     println!("{}",color_text(&msg, "yellow"));
 
     let ctrl = "CTRL:PUNCH";
@@ -17,7 +17,7 @@ pub fn hole_punching(socket: &UdpSocket, peer: &PeerInfo, incoming: &Sender<Stri
     packet.push(0x02);
     packet.extend_from_slice(ctrl.as_bytes());
 
-    incoming.send(color_text("[!] Punching Hole", "magenta")).ok();
+    incoming.send(color_text("[INFO] Punching Hole", "magenta")).ok();
     socket.send_to(&packet, peer_addr)?;
     Ok(())
 }

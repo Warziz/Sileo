@@ -1,10 +1,9 @@
 use std::net::{UdpSocket};
-use std::io::{self, Write};
+use std::io;
 use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::str;
 
-use chrono::{DateTime, Utc};
 use x25519_dalek::PublicKey;
 use base64::{engine::general_purpose, Engine as _};
 
@@ -65,7 +64,6 @@ pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, 
                             
                             //change this with channel 
                             let _ = incoming.send(message);
-                            //display_text(&username, &stdout, &message, &peer);
                         
                         }
 
@@ -118,13 +116,13 @@ pub fn wait_for_peer(
     incoming: &Sender<String>
 ) -> io::Result<PeerInfo> {
     
-    incoming.send(color_text("[*] Waiting for peer", "yellow")).ok();
+    incoming.send(color_text("[INFO] Waiting for peer", "yellow")).ok();
     
     let mut buf = [0u8; 4096];
 
     loop {
         let (len, _) = socket.recv_from(&mut buf)?;
-        incoming.send(color_text("[+] Data recieved from relay server", "green")).ok();
+        incoming.send(color_text("[INFO] Data recieved from relay server", "green")).ok();
         let data = str::from_utf8(&buf[..len]).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -175,7 +173,6 @@ pub fn wait_for_peer(
         let pubkey_other = PublicKey::from(pubkey_array);
 
         let peer_username = parts[3].to_string();
-        println!("{}, {}, {:?}, {}", ip, sport, pubkey_other, peer_username);
 
         return Ok(PeerInfo {
             peer_ip: ip,
@@ -184,35 +181,4 @@ pub fn wait_for_peer(
             peer_username,
         });
     }
-}
-
-
-fn display_text (username: &String, stdout : &Arc<Mutex<io::Stdout>>, message: &String, peer: &PeerInfo) {
-
-    let utc_now : DateTime<Utc> = Utc::now();           
-    let mut out = stdout.lock().unwrap();
-
-    // clear current line
-    write!(out, "\r\x1b[2K").unwrap();
-
-    // print peer message
-    write!(
-        out,
-        "{}\n",
-        color_text(
-            &format!("[{}] - {} > {}", utc_now, peer.peer_username, message.trim()),
-            "cyan"
-        )
-            ).unwrap();
-    // reprint prompt
-    write!(
-        out,
-        "{}",
-        color_text(
-            &format!("[{}] - {}(you) > ", utc_now, username),
-            "green"
-        )
-            ).unwrap();
-
-        out.flush().unwrap();
 }

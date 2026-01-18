@@ -1,7 +1,7 @@
 use crate::messaging::utils::connection::ConnectionMethod;
 use crate::messaging::config::Config;
 
-use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::mpsc::{Receiver, Sender};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Screen {
