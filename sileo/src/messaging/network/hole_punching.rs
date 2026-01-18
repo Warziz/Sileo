@@ -1,10 +1,11 @@
 use std::io;
 use std::net::{UdpSocket};
+use std::sync::mpsc::Sender;
 
 use crate::messaging::network::peer::PeerInfo;
 use crate::messaging::utils::user::color_text;
 
-pub fn hole_punching(socket: &UdpSocket, peer: &PeerInfo) -> io::Result<()> {
+pub fn hole_punching(socket: &UdpSocket, peer: &PeerInfo, incoming: &Sender<String>) -> io::Result<()> {
 
 
     let peer_addr = format!("{}:{}",peer.peer_ip,peer.sport);
@@ -16,7 +17,7 @@ pub fn hole_punching(socket: &UdpSocket, peer: &PeerInfo) -> io::Result<()> {
     packet.push(0x02);
     packet.extend_from_slice(ctrl.as_bytes());
 
-    println!("{}", color_text("[!] Punching Hole", "magenta"));
+    incoming.send(color_text("[!] Punching Hole", "magenta")).ok();
     socket.send_to(&packet, peer_addr)?;
     Ok(())
 }

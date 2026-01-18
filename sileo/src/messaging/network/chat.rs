@@ -115,14 +115,16 @@ pub fn send_message(socket: &UdpSocket, peer: &PeerInfo, aes_key: &[u8; 32], msg
 
 pub fn wait_for_peer(
     socket: &UdpSocket,
+    incoming: &Sender<String>
 ) -> io::Result<PeerInfo> {
     
-    println!("{}", color_text("[*] Waiting for peer", "yellow"));
+    incoming.send(color_text("[*] Waiting for peer", "yellow")).ok();
+    
     let mut buf = [0u8; 4096];
 
     loop {
         let (len, _) = socket.recv_from(&mut buf)?;
-        println!("{}",color_text("[+] Data recieved from relay server", "green"));
+        incoming.send(color_text("[+] Data recieved from relay server", "green")).ok();
         let data = str::from_utf8(&buf[..len]).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::InvalidData,

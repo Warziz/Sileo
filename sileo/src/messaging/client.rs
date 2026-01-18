@@ -57,10 +57,10 @@ impl MessagingClient {
 
         socket.send_to(serde_json::to_string(&msg)?.as_bytes(), &rendezvous_ip)?;
 
-        let peer = wait_for_peer(&socket)?;
+        let peer = wait_for_peer(&socket, &incoming)?;
         let aes_key = get_aes_key(keypair, &peer);
 
-        hole_punching(&socket, &peer)?;
+        hole_punching(&socket, &peer, &incoming)?;
 
         Ok(Self {
             socket: Arc::new(socket),
@@ -72,11 +72,6 @@ impl MessagingClient {
         })
     }
 
-    
-    pub fn configure(&mut self, config: Config) {
-        self.config = Arc::new(config);
-    }
-    
 
     pub fn start(&mut self) {
 

@@ -40,13 +40,7 @@ impl AppState {
         };
     }
 
-    /*
-    pub fn log_message(&mut self) {
-        while let Ok(log) = self.rx_backend.try_recv() {
-            self.messages.push(format!("INFO: {}", log));
-        }
-    }
-    */
+
     pub fn submit_message(&mut self){
         
         let msg = self.input.clone();
