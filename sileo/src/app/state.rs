@@ -37,9 +37,10 @@ pub struct AppState {
     pub config: Option<Config>,
     pub error_message: Option<String>,
 
-    pub tx_backend: Sender<String>,
-    pub rx_backend: Receiver<String>,
-
+    pub tx_to_backend: Sender<String>,
+    pub rx_from_backend: Receiver<String>,
+    pub tx_from_backend: Sender<String>,
+    pub rx_to_backend: Option<Receiver<String>>
 }
 
 pub enum ConfigField {
@@ -72,9 +73,14 @@ pub const CONFIG_FIELDS: [ConfigField; 11] = [
 
 
 impl AppState {
-    pub fn new() -> Self {
+    pub fn new(
+        tx_to_backend: Sender<String>,
+        rx_from_backend: Receiver<String>,
+        tx_from_backend: Sender<String>,
+        rx_to_backend: Receiver<String>
+    ) -> Self {
 
-        let (tx_backend, rx_backend) = channel::<String>();
+        
         Self {
             screen: Screen::Welcome,
             input_mode: InputMode::Normal,
@@ -96,8 +102,11 @@ impl AppState {
             error_message: None,
             selected_field: 11,
 
-            tx_backend,
-            rx_backend,
+            tx_to_backend,
+            rx_from_backend,
+            tx_from_backend,
+            rx_to_backend: Some(rx_to_backend),
+
         }
     }
 

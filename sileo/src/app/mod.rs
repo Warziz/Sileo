@@ -8,16 +8,18 @@ use state::AppState;
 
 pub struct App {
     pub state: AppState,
-    tx_backend: Sender<String>,
-    rx_backend: Receiver<String>,
 }
 
 impl App {
-    pub fn new(tx_backend: Sender<String>, rx_backend: Receiver<String>) -> Self {
+    pub fn new(
+        tx_to_backend: Sender<String>, 
+        rx_from_backend: Receiver<String>,
+        tx_from_backend: Sender<String>,
+        rx_to_backend: Receiver<String>
+    ) -> Self {
         Self {
-            state: AppState::new(),
-            tx_backend,
-            rx_backend,
+            state: AppState::new(tx_to_backend,rx_from_backend, tx_from_backend, rx_to_backend),
+
         }
     }
 }

@@ -64,7 +64,7 @@ pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, 
                             };
                             
                             //change this with channel 
-                            //let _ = incoming.send(message);
+                            let _ = incoming.send(message);
                             //display_text(&username, &stdout, &message, &peer);
                         
                         }
@@ -92,26 +92,24 @@ pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, 
 }
 
 
-pub fn start_input_loop(socket: &UdpSocket, peer: &PeerInfo, aes_key: &[u8; 32], msg:String ) {
-    let stdin = io::stdin();
-    let mut input = String::new();
+pub fn send_message(socket: &UdpSocket, peer: &PeerInfo, aes_key: &[u8; 32], msg:String ) {
+    
     let peer_addr = format!("{}:{}",peer.peer_ip,peer.sport);
 
-    loop {
-        input.clear();
-        stdin.read_line(&mut input).unwrap();
-
-        let msg = input.trim_end().as_bytes();
+        let msg = msg.trim_end().as_bytes();
         if msg.is_empty() {
-            continue;
+            return;
         }
+
         let (cipher_text,nonce) = encrypt(aes_key, msg);
         let mut packet = Vec::new();
         packet.push(0x01);
         packet.extend_from_slice(&nonce);
         packet.extend_from_slice(&cipher_text);
-        socket.send_to(&packet, &peer_addr).unwrap();
-    }
+        if let Err(e) = socket.send_to(&packet, &peer_addr) {
+            eprintln!("Failed to send message: {e}");
+        }
+
 }
 
 

@@ -1,6 +1,6 @@
 use crate::app::state::{AppState, Screen};
 use crate::messaging::utils::connection::ConnectionMethod;
-
+use crate::messaging::client::MessagingClient;
 
 impl AppState {
 
@@ -8,7 +8,13 @@ impl AppState {
         
         match self.build_config() {
             Ok(config) => {
-                self.config = Some(config);
+                let mut client = MessagingClient::new(
+                    config,
+                    self.tx_from_backend.clone(),
+                    self.rx_to_backend.take().expect("Backend init failed"),
+                ).expect("Backend init failed");
+
+                client.start();
                 self.screen = Screen::Chat;
             }
             Err(err) => {
@@ -34,12 +40,19 @@ impl AppState {
         };
     }
 
-
+    /*
+    pub fn log_message(&mut self) {
+        while let Ok(log) = self.rx_backend.try_recv() {
+            self.messages.push(format!("INFO: {}", log));
+        }
+    }
+    */
     pub fn submit_message(&mut self){
+        
         let msg = self.input.clone();
 
         // send to backend
-        let _ = self.tx_backend.send(msg.clone());
+        let _ = self.tx_to_backend.send(msg.clone());
   
         // print it to tui
         self.messages.push(format!("You: {}", msg));
@@ -49,7 +62,7 @@ impl AppState {
     }
 
     pub fn poll_backend(&mut self){
-        while let Ok(msg) = self.rx_backend.try_recv() {
+        while let Ok(msg) = self.rx_from_backend.try_recv() {
             self.messages.push(format!("Peer: {}", msg));
         }
     }

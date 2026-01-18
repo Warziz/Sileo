@@ -8,6 +8,11 @@ use crossterm::event::{self, Event, KeyEventKind};
 impl App {
     pub fn run(&mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
         loop {
+
+            //recieve peer message;
+            self.state.poll_backend();
+
+            //generate tui
             terminal.draw(|frame| {
                 ui::render(frame, &mut self.state);
             })?;

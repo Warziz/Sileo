@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::messaging::config::Config;
 use crate::messaging::network::peer::PeerInfo;
 use crate::messaging::utils::message::{Message,MessageType};
-use crate::messaging::network::chat::{init_sock, wait_for_peer, listener, start_input_loop};
+use crate::messaging::network::chat::{init_sock, listener, send_message, wait_for_peer};
 use crate::messaging::network::hole_punching::{hole_punching};
 use crate::messaging::crypto::crypto::{prepare_pubkey, get_aes_key};
 
@@ -29,6 +29,8 @@ impl MessagingClient {
 
         let socket = init_sock(config.source_port)?;
         let rendezvous_ip = format!("{}:{}", config.server_ip, config.server_port);
+
+        incoming.send(format!("[+] Trying to connect to {}",rendezvous_ip)).ok();
 
         let (pubkey_b64, keypair) = prepare_pubkey();
 
@@ -70,44 +72,44 @@ impl MessagingClient {
         })
     }
 
-    /*
+    
     pub fn configure(&mut self, config: Config) {
-        self.config = config;
+        self.config = Arc::new(config);
     }
-    */
+    
 
     pub fn start(&mut self) {
 
-    let socket_recv = self.socket.try_clone().expect("clone socket failed");
-    let socket_send = self.socket.try_clone().expect("clone socket failed");
+        let socket_recv = self.socket.try_clone().expect("clone socket failed");
+        let socket_send = self.socket.try_clone().expect("clone socket failed");
 
-    let peer = self.peer.clone();
-    let aes_key = self.aes_key.clone();
+        let peer = self.peer.clone();
+        let aes_key = self.aes_key.clone();
 
-    let incoming = self.incoming.clone();
-    let outgoing = self.outgoing.take().expect("outgoing already taken");
+        let incoming = self.incoming.clone();
+        let outgoing = self.outgoing.take().expect("outgoing already taken");
 
-    // Thread réception
-    {
-        let peer = Arc::clone(&peer);
-        let aes_key = Arc::clone(&aes_key);
-        let incoming = incoming;
+        // Thread réception
+        {
+            let peer = Arc::clone(&peer);
+            let aes_key = Arc::clone(&aes_key);
+            let incoming = incoming;
 
-        thread::spawn(move || {
-            listener(socket_recv, aes_key, peer, incoming);
-        });
+            thread::spawn(move || {
+                listener(socket_recv, aes_key, peer, incoming);
+            });
+        }
+
+        // Thread envoi
+        {
+            let peer = Arc::clone(&peer);
+            let aes_key = Arc::clone(&aes_key);
+
+            thread::spawn(move || {
+                while let Ok(msg) = outgoing.recv() {
+                    send_message(&socket_send, &peer, &aes_key, msg);
+                }
+            });
+        }
     }
-
-    // Thread envoi
-    {
-        let peer = Arc::clone(&peer);
-        let aes_key = Arc::clone(&aes_key);
-
-        thread::spawn(move || {
-            while let Ok(msg) = outgoing.recv() {
-                start_input_loop(&socket_send, &peer, &aes_key, msg);
-            }
-        });
-    }
-}
 }
