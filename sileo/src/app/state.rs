@@ -1,4 +1,4 @@
-use crate::messaging::utils::connection::ConnectionMethod;
+use crate::messaging::utils::{connection::ConnectionMethod, event::BackendEvent};
 use crate::messaging::config::Config;
 
 use std::sync::mpsc::{Receiver, Sender};
@@ -32,14 +32,15 @@ pub struct AppState {
     pub server_port: String,
     pub source_port: String,
     pub destination_port: String,
+    pub peer_username: Option<String>,
 
     pub selected_field: usize,
     pub config: Option<Config>,
     pub error_message: Option<String>,
 
     pub tx_to_backend: Sender<String>,
-    pub rx_from_backend: Receiver<String>,
-    pub tx_from_backend: Sender<String>,
+    pub rx_from_backend: Receiver<BackendEvent>,
+    pub tx_from_backend: Sender<BackendEvent>,
     pub rx_to_backend: Option<Receiver<String>>
 }
 
@@ -75,8 +76,8 @@ pub const CONFIG_FIELDS: [ConfigField; 11] = [
 impl AppState {
     pub fn new(
         tx_to_backend: Sender<String>,
-        rx_from_backend: Receiver<String>,
-        tx_from_backend: Sender<String>,
+        rx_from_backend: Receiver<BackendEvent>,
+        tx_from_backend: Sender<BackendEvent>,
         rx_to_backend: Receiver<String>
     ) -> Self {
 
@@ -97,6 +98,7 @@ impl AppState {
             server_port: String::new(),
             source_port: String::new(),
             destination_port: String::new(),
+            peer_username: None,
 
             config: None,
             error_message: None,

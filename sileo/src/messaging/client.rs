@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use crate::messaging::config::Config;
 use crate::messaging::network::peer::PeerInfo;
+use crate::messaging::utils::event::BackendEvent;
 use crate::messaging::utils::message::{Message,MessageType};
 use crate::messaging::network::chat::{init_sock, listener, send_message, wait_for_peer};
 use crate::messaging::network::hole_punching::{hole_punching};
@@ -16,21 +17,21 @@ pub struct MessagingClient {
     aes_key: Arc<[u8;32]>,
     config: Arc<Config>,
 
-    incoming: Sender<String>,
+    incoming: Sender<BackendEvent>,
     outgoing: Option<Receiver<String>>,
 }
 
 impl MessagingClient {
     pub fn new(
         config: Config, 
-        incoming: Sender<String>,
+        incoming: Sender<BackendEvent>,
         outgoing: Receiver<String>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
 
         let socket = init_sock(config.source_port)?;
         let rendezvous_ip = format!("{}:{}", config.server_ip, config.server_port);
 
-        incoming.send(format!("[+] Trying to connect to {}",rendezvous_ip)).ok();
+        incoming.send(BackendEvent::Log(format!("Trying to connect to {}",rendezvous_ip))).ok();
 
         let (pubkey_b64, keypair) = prepare_pubkey();
 

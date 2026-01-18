@@ -4,12 +4,13 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc};
 use std::str;
 
+
 use x25519_dalek::PublicKey;
 use base64::{engine::general_purpose, Engine as _};
 
-use crate::messaging::network::peer::PeerInfo;
+use crate::messaging::network::peer::{PeerInfo};
 use crate::messaging::crypto::aes::{decrypt, encrypt};
-use crate::messaging::utils::user::color_text;
+use crate::messaging::utils::event::BackendEvent;
 
 pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
     
@@ -20,7 +21,7 @@ pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
 }
 
 
-pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, incoming: Sender<String>){
+pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, incoming: Sender<BackendEvent>){
 
         let mut buffer = [0; 1024];
         let peer = Arc::clone(&peer);
@@ -63,7 +64,7 @@ pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, 
                             };
                             
                             //change this with channel 
-                            let _ = incoming.send(message);
+                            let _ = incoming.send(BackendEvent::PeerMessage { username: peer.peer_username.clone(), message });
                         
                         }
 
@@ -113,16 +114,22 @@ pub fn send_message(socket: &UdpSocket, peer: &PeerInfo, aes_key: &[u8; 32], msg
 
 pub fn wait_for_peer(
     socket: &UdpSocket,
-    incoming: &Sender<String>
+    incoming: &Sender<BackendEvent>
 ) -> io::Result<PeerInfo> {
     
-    incoming.send(color_text("[INFO] Waiting for peer", "yellow")).ok();
+    incoming.send(
+        BackendEvent::Log("Waiting for peer".to_string())
+    ).ok();
     
     let mut buf = [0u8; 4096];
 
     loop {
         let (len, _) = socket.recv_from(&mut buf)?;
-        incoming.send(color_text("[INFO] Data recieved from relay server", "green")).ok();
+        
+        incoming.send(
+            BackendEvent::Log("Data recieved from relay server".to_string())
+        ).ok();
+        
         let data = str::from_utf8(&buf[..len]).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -173,6 +180,11 @@ pub fn wait_for_peer(
         let pubkey_other = PublicKey::from(pubkey_array);
 
         let peer_username = parts[3].to_string();
+
+        incoming.send(
+            BackendEvent::PeerConnected { username: peer_username.clone(), 
+            }
+        ).ok();
 
         return Ok(PeerInfo {
             peer_ip: ip,

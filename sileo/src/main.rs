@@ -4,7 +4,7 @@ mod app;
 
 use std::sync::mpsc::channel;
 
-use crate::app::App;
+use crate::{app::App, messaging::utils::event::BackendEvent};
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //tui to backend
     let (tx_to_backend, rx_to_backend) = channel::<String>();
     //backend to tui
-    let (tx_from_backend, rx_from_backend) = channel::<String>();
+    let (tx_from_backend, rx_from_backend) = channel::<BackendEvent>();
 
     // create tui
     let mut app = App::new(tx_to_backend, rx_from_backend, tx_from_backend, rx_to_backend);
