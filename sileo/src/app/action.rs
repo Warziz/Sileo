@@ -1,8 +1,10 @@
+
 use std::thread;
 
 use crate::app::state::{AppState, Screen};
 use crate::messaging::utils::connection::ConnectionMethod;
 use crate::messaging::client::MessagingClient;
+use crate::messaging::utils::event::BackendEvent;
 
 impl AppState {
 
@@ -17,15 +19,15 @@ impl AppState {
                 let rx_backend = self.rx_to_backend.take().expect("Backend already started");
 
                 thread::spawn(move || {
-                    tx_logs.send("[INFO] Backend starting...".into()).ok();
+                    tx_logs.send(BackendEvent::Log("[INFO] Backend starting...".to_string())).ok();
 
                     match MessagingClient::new(config, tx_logs.clone(), rx_backend){
                         Ok(mut client) => {
-                            tx_logs.send("[INFO] Connected to peer".into()).ok();
+                            tx_logs.send(BackendEvent::Log("Connected to peer".to_string())).ok();
                             client.start();
                         }
                         Err(err) => {
-                            tx_logs.send(format!("[ERROR] {}",err)).ok();
+                            tx_logs.send(BackendEvent::Error(err.to_string())).ok();
                         }
                     }
 
@@ -70,8 +72,25 @@ impl AppState {
     }
 
     pub fn poll_backend(&mut self){
-        while let Ok(msg) = self.rx_from_backend.try_recv() {
-            self.messages.push(format!("Peer: {}", msg));
+        while let Ok(event) = self.rx_from_backend.try_recv() {
+            match event {
+                BackendEvent::Log(msg) => {
+                    self.messages.push(format!("[INFO]: {}",msg));
+                }
+
+                BackendEvent::PeerConnected { username } => {
+                    self.peer_username = Some(username.clone());
+                    self.messages.push(format!("Connected to {}", username));
+                }
+
+                BackendEvent::PeerMessage { username, message } => {
+                    self.messages.push(format!("{}: {}", username, message));
+                }
+
+                BackendEvent::Error(err) => {
+                    self.messages.push(format!("[ERROR]: {}", err));
+                }
+            }
         }
     }
 

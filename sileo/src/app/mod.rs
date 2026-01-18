@@ -6,6 +6,8 @@ use std::sync::mpsc::{Sender,Receiver};
 
 use state::AppState;
 
+use crate::messaging::utils::event::BackendEvent;
+
 pub struct App {
     pub state: AppState,
 }
@@ -13,8 +15,8 @@ pub struct App {
 impl App {
     pub fn new(
         tx_to_backend: Sender<String>, 
-        rx_from_backend: Receiver<String>,
-        tx_from_backend: Sender<String>,
+        rx_from_backend: Receiver<BackendEvent>,
+        tx_from_backend: Sender<BackendEvent>,
         rx_to_backend: Receiver<String>
     ) -> Self {
         Self {
