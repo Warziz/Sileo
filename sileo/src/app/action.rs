@@ -19,7 +19,7 @@ impl AppState {
                 let rx_backend = self.rx_to_backend.take().expect("Backend already started");
 
                 thread::spawn(move || {
-                    tx_logs.send(BackendEvent::Log("[INFO] Backend starting...".to_string())).ok();
+                    tx_logs.send(BackendEvent::Log("Backend starting...".to_string())).ok();
 
                     match MessagingClient::new(config, tx_logs.clone(), rx_backend){
                         Ok(mut client) => {
