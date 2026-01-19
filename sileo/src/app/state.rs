@@ -16,6 +16,11 @@ pub enum InputMode {
     Editing,
 }
 
+pub enum Action {
+    GoToConfig,
+    Quit
+}
+
 
 pub struct AppState {
     pub input: String,
@@ -37,6 +42,7 @@ pub struct AppState {
     pub selected_field: usize,
     pub config: Option<Config>,
     pub error_message: Option<String>,
+    pub pending_action: Option<Action>,
 
     pub tx_to_backend: Sender<String>,
     pub rx_from_backend: Receiver<BackendEvent>,
@@ -103,6 +109,7 @@ impl AppState {
             config: None,
             error_message: None,
             selected_field: 11,
+            pending_action: None,
 
             tx_to_backend,
             rx_from_backend,
