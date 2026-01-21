@@ -61,11 +61,21 @@ impl AppState {
         
         let msg = self.input.clone();
 
+        let was_at_bottom =
+        self.vertical_scroll + self.visible_height >= self.messages.len();
+
         // send to backend
         let _ = self.tx_to_backend.send(msg.clone());
   
         // print it to tui
         self.messages.push(format!("You: {}", msg));
+
+        if was_at_bottom {
+        self.vertical_scroll = self
+            .messages
+            .len()
+            .saturating_sub(self.visible_height);
+        }
 
         self.input.clear();
         self.character_index = 0;
@@ -73,6 +83,10 @@ impl AppState {
 
     pub fn poll_backend(&mut self){
         while let Ok(event) = self.rx_from_backend.try_recv() {
+
+            let was_at_bottom =
+            self.vertical_scroll + self.visible_height >= self.messages.len();
+
             match event {
                 BackendEvent::Log(msg) => {
                     self.messages.push(format!("[INFO]: {}",msg));
@@ -80,7 +94,7 @@ impl AppState {
 
                 BackendEvent::PeerConnected { username } => {
                     self.peer_username = Some(username.clone());
-                    self.messages.push(format!("Connected to {}", username));
+                    self.messages.push(format!("[INFO]: Connected to {}", username));
                 }
 
                 BackendEvent::PeerMessage { username, message } => {
@@ -91,6 +105,14 @@ impl AppState {
                     self.messages.push(format!("[ERROR]: {}", err));
                 }
             }
+
+            if was_at_bottom {
+                self.vertical_scroll = self
+                    .messages
+                    .len()
+                    .saturating_sub(self.visible_height);
+        }
+
         }
     }
 

@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::{Duration};
 
 use crate::tui::ui;
 use crate::tui::input;

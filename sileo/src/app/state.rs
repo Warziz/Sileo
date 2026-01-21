@@ -1,3 +1,5 @@
+use ratatui::widgets::ScrollbarState;
+
 use crate::messaging::utils::{connection::ConnectionMethod, event::BackendEvent};
 use crate::messaging::config::Config;
 
@@ -28,6 +30,11 @@ pub struct AppState {
     pub input_mode: InputMode,
     pub messages: Vec<String>,
     pub screen: Screen,
+    pub vertical_scroll: usize,
+    pub last_chat_height: Option<usize>,
+    pub visible_height: usize,
+    pub scrollbar_state: ScrollbarState,
+
 
     pub method: ConnectionMethod,
     pub anonymous: bool,
@@ -95,6 +102,11 @@ impl AppState {
             input: String::new(),
             character_index: 0,
             messages: Vec::new(),
+            vertical_scroll: 0,
+            last_chat_height: None,
+            visible_height: 0,
+            scrollbar_state: ScrollbarState::new(0),
+
 
             method: ConnectionMethod::Hole,
             anonymous: true,

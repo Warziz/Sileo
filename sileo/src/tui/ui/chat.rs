@@ -1,8 +1,7 @@
 use ratatui::{
-    Frame,
-    layout::{Constraint, Layout, Position},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
-    style::{Style, Color},
+    Frame, layout::{Constraint, Layout, Position}, 
+    style::{Color, Style}, 
+    widgets::{Block, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState}
 };
 use crate::app::state::{AppState, InputMode};
 
@@ -17,15 +16,24 @@ pub fn render(frame: &mut Frame, state: &mut AppState) {
     let input_area = layout[1];
     let help_area = layout[2];
 
-    let messages: Vec<ListItem> = state.messages
+    //Scrolling part
+    let visible_height = messages_area.height.saturating_sub(2) as usize;
+    state.visible_height = visible_height;
+    let total  = state.messages.len();
+
+    let max_scroll = total.saturating_sub(visible_height);
+    let scroll = state.vertical_scroll.min(max_scroll);
+    let visible = &state.messages[scroll..(scroll + visible_height).min(total)];
+
+    let items: Vec<ListItem> = visible
         .iter()
         .map(|m| ListItem::new(m.clone()))
         .collect();
 
-    let messages = List::new(messages)
+    let list = List::new(items)
         .block(Block::new().borders(Borders::ALL).title("Chat"));
 
-    frame.render_widget(messages, messages_area);
+    frame.render_widget(list, messages_area);
 
     let input = Paragraph::new(state.input.as_str())
         .style(match state.input_mode {
@@ -49,4 +57,16 @@ pub fn render(frame: &mut Frame, state: &mut AppState) {
     });
 
     frame.render_widget(help, help_area);
+
+    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(Some("▲"))
+        .end_symbol(Some("▼"));
+
+     state.scrollbar_state = state.scrollbar_state
+        .position(scroll)
+        .content_length(total)
+        .viewport_content_length(visible_height);
+
+    frame.render_stateful_widget(scrollbar,messages_area,&mut state.scrollbar_state);
+    
 }

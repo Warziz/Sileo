@@ -10,7 +10,7 @@ pub fn hole_punching(socket: &UdpSocket, peer: &PeerInfo, incoming: &Sender<Back
 
     let peer_addr = format!("{}:{}",peer.peer_ip,peer.sport);
     let msg = format!("Peer address: {}", peer_addr);
-    incoming.send(BackendEvent::Log(msg));
+    incoming.send(BackendEvent::Log(msg)).ok();
 
     let ctrl = "CTRL:PUNCH";
     let mut packet = Vec::new();
