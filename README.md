@@ -1,59 +1,43 @@
 # **Sileo** — Secure, Ephemeral & Peer-to-Peer Messaging
 
 > **Fast. Confidential. Traceless.**  
-> Sileo est une application de messagerie instantanée éphémère conçue pour des communications rapides, chiffrées et sans traces, directement **de pair à pair** (P2P).  
-> Grâce à des techniques de **Hole Punching** et **UPnP**, vos messages transitent directement entre vous et votre interlocuteur — aucun serveur ne conserve vos échanges.
+> Sileo is an ephemeral instant messaging service, it's made for fast and anonymous communication. All the discussion is cipher, erase at the end and it's **peer to peer** (P2P).
+> Thanks to **Hole Punching** and **UPnP** (Implemented old python version but not in the recent one) techniques, your messages pass directly between you and your interlocutor — no server stores your exchanges.
 
 ---
 
-## ✨ **Caractéristiques principales**
-- **100% Peer-to-Peer** — Pas d’intermédiaire : vous parlez directement à votre contact.
-- **Double mode de connexion** :
-  - `hole` : **Hole Punching** pur pour NAT traversal.
-  - `upnp` : Configuration automatique de votre routeur pour ouvrir les ports nécessaires.
-  - `both` : Test automatique des deux méthodes.
-- **Chiffrement de bout en bout** (E2EE) pour préserver la confidentialité.
-- **Messages éphémères** : aucun stockage local ou distant, rien n’est conservé.
-- **Anonymat** : pseudonyme aléatoire ou choisi, aucun lien avec votre identité réelle.
-- **Serveur de rendez-vous personnalisable** pour trouver vos pairs.
+## **Main features**
+- **100% Peer-to-Peer** — No intermediate : you talk directly to your contact.
+- **Double connection method** :
+  - `hole` : **Hole Punching** pur for NAT traversal.
+  - `upnp` : Automatic configuration of your router to open the necessary ports.
+  - `both` : Both method will be tested.
+- **End to End Encryption** (E2EE) for confidentiality.
+- **Ephemeral messages** : no local or remote storage, nothing is retained.
+- **Anonymous** : A random or chosen pseudonym, with no connection to your real identity.
+- **Customizable meeting server** to find your peers.
 
 ---
 
-## 📦 **Installation**
+## **Installation**
+### From Source
 ```bash
 git clone https://github.com/Warziz/sileo.git
-cd sileo
-pip3 install -r requirements.txt
-python3 agent.py [OPTIONS]
+cd Sileo/sileo
+cargo build
+./sileo.exe
 ```
 
-## ⚙️ Arguments disponibles
+## Available Arguments
 
-| Argument             | Alias    | Type  | Défaut  | Description                                                                |
-| -------------------- | -------- | ----- | ------- | -------------------------------------------------------------------------- |
-| `--method`           | `-m`     | `str` | `both`  | Méthode de connexion : `both`, `hole`, `upnp`.                             |
-| `--anonymous`        | `-a`     | flag  | `True`  | Utiliser un pseudonyme aléatoire (mode anonyme).                           |
-| `--search`           | `-s`     | `str` | *None*  | Rechercher un utilisateur avec qui discuter.                               |
-| `--username`         | `-u`     | `str` | *None*  | Choisir un pseudonyme personnalisé.                                        |
-| `--server-ip`        | `-srv`   | `str` | *None*  | IP du serveur de rendez-vous (doit être identique pour les deux contacts). |
-| `--server-port`      | `-srv_p` | `int` | *None*  | Port du serveur de rendez-vous.                                            |
-| `--source-port`      | `-sp`    | `int` | `50001` | Port source pour Hole Punching ou UPnP.                                    |
-| `--destination-port` | `-dp`    | `int` | `50002` | Port destination pour Hole Punching ou UPnP.                               |
+| Argument           | Type  | Défaut  | Description                                                                |
+| -------------------| ----- | ------- | -------------------------------------------------------------------------- |
+| `method`           | `str` | `both`  | Connection method : `both`, `hole`, `upnp`.                                |
+| `anonymous`        | `bool`| `True`  | Use random pseudonym (anonymous mode).                                     |
+| `username`         | `str` | *None*  | Choose your pseudonym.                                                     |
+| `server-ip`        | `str` | *None*  | Appointment server IP address (must be the same for both contacts).        |
+| `server-port`      | `int` | *None*  | Appointment server port.                                                   |
+| `source-port`      | `int` | `50001` | Source port for Hole Punching or UPnP.                                     |
+| `destination-port` | `int` | `50002` | Destination port for Hole Punching or UPnP.                                |
 
-## 🚀 Exemples d’utilisation
-
-Mode Hole Punching pur
-
-```
-python3 agent.py -m hole -u "ShadowFox"
-```
-
-Mode UPnP avec port personnalisé
-```
-python3 agent.py -m upnp --source_port 60001 --destination_port 60002
-```
-
-Connexion anonyme avec serveur de rendez-vous spécifique
-```
-python3 agent.py -a -srv 192.168.1.10 -srv_p 5000
-```
+## Example of use
