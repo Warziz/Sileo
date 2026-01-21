@@ -47,7 +47,6 @@ pub struct AppState {
     pub peer_username: Option<String>,
 
     pub selected_field: usize,
-    pub config: Option<Config>,
     pub error_message: Option<String>,
     pub pending_action: Option<Action>,
 
@@ -118,7 +117,6 @@ impl AppState {
             destination_port: String::new(),
             peer_username: None,
 
-            config: None,
             error_message: None,
             selected_field: 11,
             pending_action: None,

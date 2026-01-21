@@ -1,7 +1,7 @@
 use ratatui::{
     Frame, layout::{Constraint, Layout, Position}, 
     style::{Color, Style}, 
-    widgets::{Block, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState}
+    widgets::{Block, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation}
 };
 use crate::app::state::{AppState, InputMode};
 

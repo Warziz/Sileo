@@ -15,8 +15,6 @@ pub struct MessagingClient {
     socket: Arc<UdpSocket>,
     peer: Arc<PeerInfo>,
     aes_key: Arc<[u8;32]>,
-    config: Arc<Config>,
-
     incoming: Sender<BackendEvent>,
     outgoing: Option<Receiver<String>>,
 }
@@ -67,7 +65,6 @@ impl MessagingClient {
             socket: Arc::new(socket),
             peer: Arc::new(peer),
             aes_key: Arc::new(aes_key),
-            config: Arc::new(config),
             incoming,
             outgoing: Some(outgoing)
         })
