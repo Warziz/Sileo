@@ -1,6 +1,6 @@
 use serde::{Deserialize,Serialize};
 
-use crate::utils::connection::ConnectionMethod;
+use crate::messaging::utils::connection::ConnectionMethod;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum MessageType {

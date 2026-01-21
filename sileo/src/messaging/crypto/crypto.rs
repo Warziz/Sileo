@@ -1,7 +1,7 @@
 use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
 use base64::{engine::general_purpose, Engine as _};
 
-use crate::{crypto::kdf::derive_aes_key, network::peer::PeerInfo};
+use crate::{messaging::crypto::kdf::derive_aes_key, messaging::network::peer::PeerInfo};
 
 pub struct KeyPair {
     pub secret: EphemeralSecret,
