@@ -19,20 +19,34 @@ pub struct MessagingClient {
     outgoing: Option<Receiver<String>>,
 }
 
+
+///    Impl MessagingClient is the interface between TUI in Backend in Sileo.
+///    There is two method: new() and start().
+///
+///    new() takes theses args:
+///    - config: contains informations about the clients inputs (Server IP, Server Port, Destination Port, etc..)
+///    - incoming: channel use to send backend informations to the TUI.
+///    - outgoing; channel use to recieve TUI messages to send it over the network.
+///    This function is use to intiate backend connection.
+
 impl MessagingClient {
+
     pub fn new(
         config: Config, 
         incoming: Sender<BackendEvent>,
         outgoing: Receiver<String>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
 
+        //initiate socket and server addresse
         let socket = init_sock(config.source_port)?;
         let rendezvous_ip = format!("{}:{}", config.server_ip, config.server_port);
 
         incoming.send(BackendEvent::Log(format!("Trying to connect to {}",rendezvous_ip))).ok();
 
+        //generate pubkey for prepare encryption     
         let (pubkey_b64, keypair) = prepare_pubkey();
 
+        //prepare message type: pubkey
         let msg = Message {
             status: MessageType::Pubkey,
             username: config.username.clone(),
@@ -44,7 +58,7 @@ impl MessagingClient {
 
         socket.send_to(serde_json::to_string(&msg)?.as_bytes(), &rendezvous_ip)?;
 
-        // Ready
+        //prepare message type: ready for communication
         let msg = Message {
             status: MessageType::Ready,
             username: config.username.clone(),
@@ -56,9 +70,11 @@ impl MessagingClient {
 
         socket.send_to(serde_json::to_string(&msg)?.as_bytes(), &rendezvous_ip)?;
 
+        //generate peer information in struct then generate AES key
         let peer = wait_for_peer(&socket, &incoming)?;
         let aes_key = get_aes_key(keypair, &peer);
 
+        //punching hole throught NAT
         hole_punching(&socket, &peer, &incoming)?;
 
         Ok(Self {
@@ -71,8 +87,15 @@ impl MessagingClient {
     }
 
 
+///    start() takes theses args:
+///    - None
+///    This function is use to launch two separates threads. 
+///    One listener, which will recieve message from the peer.
+///    One sender, which will send message for the peer.
+
     pub fn start(&mut self) {
 
+        //cloning values
         let socket_recv = self.socket.try_clone().expect("clone socket failed");
         let socket_send = self.socket.try_clone().expect("clone socket failed");
 
@@ -82,7 +105,7 @@ impl MessagingClient {
         let incoming = self.incoming.clone();
         let outgoing = self.outgoing.take().expect("outgoing already taken");
 
-        // Thread réception
+        //recieve thread
         {
             let peer = Arc::clone(&peer);
             let aes_key = Arc::clone(&aes_key);
@@ -93,7 +116,7 @@ impl MessagingClient {
             });
         }
 
-        // Thread envoi
+        //sender thread
         {
             let peer = Arc::clone(&peer);
             let aes_key = Arc::clone(&aes_key);

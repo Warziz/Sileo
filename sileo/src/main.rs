@@ -19,8 +19,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new(tx_to_backend, rx_from_backend, tx_from_backend, rx_to_backend);
 
     color_eyre::install()?;
+    //generate tui
     let terminal = ratatui::init();
-    app.run(terminal)?; // gère Welcome, Config, Chat
+    app.run(terminal)?; // manage Welcome, Config, Chat
 
     Ok(())
 
