@@ -5,6 +5,22 @@ use std::sync::mpsc::Sender;
 use crate::messaging::network::peer::PeerInfo;
 use crate::messaging::utils::event::BackendEvent;
 
+/// Performs UDP hole punching with a peer.
+///
+/// This function sends a control packet to the peer in order to
+/// establish a direct UDP communication path through NAT.
+/// Progress information is emitted through the backend event channel.
+///
+/// # Arguments
+///
+/// * `socket` - The UDP socket used to send the control packet.
+/// * `peer` - Information about the target peer.
+/// * `incoming` - A channel sender used to emit backend events.
+///
+/// # Returns
+///
+/// Returns `Ok(())` if the packet was successfully sent,
+/// or an `io::Error` if the send operation fails.
 pub fn hole_punching(socket: &UdpSocket, peer: &PeerInfo, incoming: &Sender<BackendEvent>) -> io::Result<()> {
 
 

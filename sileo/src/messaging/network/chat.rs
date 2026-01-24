@@ -12,6 +12,15 @@ use crate::messaging::network::peer::{PeerInfo};
 use crate::messaging::crypto::aes::{decrypt, encrypt};
 use crate::messaging::utils::event::BackendEvent;
 
+/// Generate a socket (UDP) on 0.0.0.0 and a choosen port.
+/// 
+/// # Arguments
+/// 
+/// * `port` - The local port choose by the user.
+/// 
+/// # Returns
+/// 
+/// A udp socket
 pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
     
     let addr = format!("0.0.0.0:{}",port);
@@ -20,7 +29,17 @@ pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
     Ok(socket)
 }
 
-
+/// Recieve all the peer message from the network, then send it to the TUI with the channel.
+///
+/// The main loop contain a match loop that will check the code message: 0x01 = peer message, 0x02 = punching hole.
+/// All the message a decrypted with the AES key using AES-256-GCM algorithm.  
+/// 
+/// # Arguments
+/// 
+/// * `socket` - UDP socket use for recieve message
+/// * `aes_key` - A 32-byte AES-256 key, should be "Arced".
+/// * `peer` - A structure that contain all the peer info needed, should be "Arced".
+/// * `incoming` - A sender channel use to communicate with the TUI. BackendEvent is an enum to classify messages.
 pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, incoming: Sender<BackendEvent>){
 
         let mut buffer = [0; 1024];
@@ -63,12 +82,14 @@ pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, 
                                 }
                             };
                             
-                            //change this with channel 
+                            //send the message to the TUI 
                             let _ = incoming.send(BackendEvent::PeerMessage { username: peer.peer_username.clone(), message });
                         
                         }
 
                         0x02 => {
+                            //this part is made to do the hole without loosing the first message of the peer.
+                            //just checking if the message is CTRL:PUNCH
                             let payload = &data[1..];
                             let message = match std::str::from_utf8(payload) {
                                 Ok(m) => m,
@@ -90,7 +111,17 @@ pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, 
         }
 }
 
-
+/// Encrypts and sends a message to a peer over UDP.
+///
+/// The message is encrypted using AES-256-GCM and sent as a single UDP packet.
+/// Empty or whitespace-only messages are ignored.
+///
+/// # Arguments
+///
+/// * `socket` - The UDP socket used to send the packet.
+/// * `peer` - Information about the destination peer.
+/// * `aes_key` - The 32-byte AES-256 key used for encryption.
+/// * `msg` - The plaintext message to send.
 pub fn send_message(socket: &UdpSocket, peer: &PeerInfo, aes_key: &[u8; 32], msg:String ) {
     
     let peer_addr = format!("{}:{}",peer.peer_ip,peer.sport);
@@ -112,6 +143,21 @@ pub fn send_message(socket: &UdpSocket, peer: &PeerInfo, aes_key: &[u8; 32], msg
 }
 
 
+/// Waits for peer information received over UDP.
+///
+/// This function blocks until valid peer data is received, parses the
+/// incoming message, and constructs a `PeerInfo` structure from it.
+/// Status updates are sent to the backend through the provided channel.
+///
+/// # Arguments
+///
+/// * `socket` - The UDP socket used to receive data.
+/// * `incoming` - A channel sender used to emit backend events.
+///
+/// # Returns
+///
+/// On success, returns the parsed `PeerInfo`.
+/// On failure, returns an `io::Error` describing the issue.
 pub fn wait_for_peer(
     socket: &UdpSocket,
     incoming: &Sender<BackendEvent>
