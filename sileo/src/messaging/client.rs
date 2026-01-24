@@ -11,25 +11,45 @@ use crate::messaging::network::chat::{init_sock, listener, send_message, wait_fo
 use crate::messaging::network::hole_punching::{hole_punching};
 use crate::messaging::crypto::crypto::{prepare_pubkey, get_aes_key};
 
+
+/// A client responsible for encrypted peer-to-peer messaging.
+///
+/// `MessagingClient` acts as the interface between the backend logic
+/// and the TUI. It manages network communication, key exchange,
+/// encryption, and message dispatching.
 pub struct MessagingClient {
+    /// UDP socket used for sending and receiving packets.
     socket: Arc<UdpSocket>,
+    /// Information about the connected peer.
     peer: Arc<PeerInfo>,
+    /// AES-256 key used to encrypt and decrypt messages.
     aes_key: Arc<[u8;32]>,
+    /// Channel used to send backend events to the TUI.
     incoming: Sender<BackendEvent>,
+    /// Channel used to receive outgoing messages from the TUI.
     outgoing: Option<Receiver<String>>,
 }
 
-
-///    Impl MessagingClient is the interface between TUI in Backend in Sileo.
-///    There is two method: new() and start().
-///
-///    new() takes theses args:
-///    - config: contains informations about the clients inputs (Server IP, Server Port, Destination Port, etc..)
-///    - incoming: channel use to send backend informations to the TUI.
-///    - outgoing; channel use to recieve TUI messages to send it over the network.
-///    This function is use to intiate backend connection.
-
 impl MessagingClient {
+
+    /// Creates and initializes a new `MessagingClient`.
+    ///
+    /// This function establishes the initial connection with the rendezvous
+    /// server, exchanges public keys, derives a shared AES key, and performs
+    /// NAT hole punching with the peer.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Client configuration parameters (server address, ports,
+    ///   username, connection method, etc.).
+    /// * `incoming` - Channel used to send backend events to the TUI.
+    /// * `outgoing` - Channel used to receive messages from the TUI to be sent
+    ///   over the network.
+    ///
+    /// # Returns
+    ///
+    /// On success, returns an initialized `MessagingClient`.
+    /// On failure, returns an error describing the issue.
 
     pub fn new(
         config: Config, 
@@ -87,11 +107,13 @@ impl MessagingClient {
     }
 
 
-///    start() takes theses args:
-///    - None
-///    This function is use to launch two separates threads. 
-///    One listener, which will recieve message from the peer.
-///    One sender, which will send message for the peer.
+    /// Starts the messaging client.
+    ///
+    /// This function spawns two background threads:
+    /// - A listener thread that receives and decrypts messages from the peer.
+    /// - A sender thread that encrypts and sends messages provided by the TUI.
+    ///
+    /// This method consumes the outgoing channel and should only be called once.
 
     pub fn start(&mut self) {
 
