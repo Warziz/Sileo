@@ -1,5 +1,11 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+
+/// Function for generate an 8 random characters pseudonyme if anonymous mode is True.
+/// 
+/// # Returns
+/// 
+/// A 8 long String.
 pub fn generate_username() -> String {
 
     const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
