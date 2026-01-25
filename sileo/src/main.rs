@@ -7,22 +7,31 @@ use std::sync::mpsc::channel;
 use crate::{app::App, messaging::utils::event::BackendEvent};
 
 
+/// Application entry point.
+///
+/// This function initializes communication channels, sets up the
+/// terminal user interface, and starts the main application loop.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    
-    // make channel
-    //tui to backend
+    // Create communication channels
+    // TUI -> backend
     let (tx_to_backend, rx_to_backend) = channel::<String>();
-    //backend to tui
+    // Backend -> TUI
     let (tx_from_backend, rx_from_backend) = channel::<BackendEvent>();
 
-    // create tui
-    let mut app = App::new(tx_to_backend, rx_from_backend, tx_from_backend, rx_to_backend);
+    // Initialize application state
+    let mut app = App::new(
+        tx_to_backend,
+        rx_from_backend,
+        tx_from_backend,
+        rx_to_backend,
+    );
 
+    // Install enhanced error reporting
     color_eyre::install()?;
-    //generate tui
+
+    // Initialize terminal and start the TUI
     let terminal = ratatui::init();
-    app.run(terminal)?; // manage Welcome, Config, Chat
+    app.run(terminal)?;
 
     Ok(())
-
 }
