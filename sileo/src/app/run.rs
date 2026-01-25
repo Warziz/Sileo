@@ -1,0 +1,60 @@
+use std::time::{Duration};
+
+use crate::tui::ui;
+use crate::tui::input;
+use crate::app::App;
+use crate::app::state::{Action, Screen};
+
+use ratatui::DefaultTerminal;
+use crossterm::event::{self, Event, KeyEventKind};
+
+
+impl App {
+
+
+    /// This function is the main loop for App implementation.
+    /// It's recieve all the message from the peer and refresh the TUI
+    /// 
+    /// # Arguments
+    /// * `terminal` - DefaultTerminal from Ratatui class.
+    /// 
+    /// # Returns
+    /// 
+    /// Error if there is any with the help of color_eyre crate
+    /// Else nothing.
+    pub fn run(&mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
+
+        loop {
+
+            //recieve peer message
+            self.state.poll_backend();
+
+            if let Some(action) = self.state.pending_action.take() {
+                match action {
+                    Action::GoToConfig => {
+                        self.state.screen = Screen::Config;
+                    }
+                    Action::Quit => {
+                        break Ok(());
+                    }
+                }
+            }
+
+            //re-generate tui 
+            terminal.draw(|frame| {
+                ui::render(frame, &mut self.state);
+            })?;
+
+            //tick rate for non-blocking interface
+            if event::poll(Duration::from_millis(16))? {
+                if let Event::Key(key) = event::read()? {
+                    if key.kind == KeyEventKind::Press {
+                        input::handle(key, &mut self.state);
+                    }
+                    
+                }
+            }
+
+        }
+    }
+}
