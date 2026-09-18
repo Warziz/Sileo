@@ -1,42 +1,20 @@
-use std::{net::SocketAddr, time::Duration};
+use std::net::SocketAddr;
 
-use igd_next::{self, SearchOptions};
+extern crate igd_next as igd;
 
 
-pub async fn mapping_port(local_addr: SocketAddr) -> igd_next::Result<()> {
+pub fn mapping_port(local_addr: SocketAddr,source_port: Option<u16>, destination_port: Option<u16> ) -> igd_next::Result<()> {
 
     println!("Trying to map port");
     println!("Socket Addr {:?}", local_addr);
 
-    let ops = SearchOptions { timeout: Some(Duration::from_secs(60)), ..Default::default()};
-    match igd_next::search_gateway(ops) {
-        Err(ref err) => println!("Error: {err}"),
-        Ok(gateway) => match gateway.get_external_ip() {
-            Err(ref err) => {
-                println!("There was an error! {err}");
-            }
-            Ok(ext_addr) => {
-                println!("Local gateway: {gateway}, External ip address: {ext_addr}");
-            }
-        },
-    }
+    let source_port = source_port.unwrap();
+    let destination_port = destination_port.unwrap();
+    let gateway = igd::search_gateway(Default::default())?;
+    let mut local_addr = local_addr;
 
-/* 
-    match gateway
-        .add_any_port(
-            igd_next::PortMappingProtocol::TCP,
-            local_addr,
-            180,
-            "Testing mapping",
-        )
-    {
-        Ok(port) => {
-            println!("Port mapped successfully: {}", port);
-        }
-        Err(err) => {
-            println!("There was an error: {}", err);
-        }
-    }
-*/
+    local_addr.set_port(source_port);
+    gateway.add_port(igd::PortMappingProtocol::TCP,destination_port, local_addr, 60, "Sileo")?;
     Ok(())
+          
 }
