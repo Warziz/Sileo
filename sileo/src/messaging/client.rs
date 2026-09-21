@@ -5,10 +5,12 @@ use std::sync::Arc;
 
 use crate::messaging::config::Config;
 use crate::messaging::network::peer::PeerInfo;
+use crate::messaging::utils::connection::ConnectionMethod;
 use crate::messaging::utils::event::BackendEvent;
 use crate::messaging::utils::message::{Message,MessageType};
 use crate::messaging::network::chat::{init_sock, listener, send_message, wait_for_peer};
 use crate::messaging::network::hole_punching::{hole_punching};
+use crate::messaging::network::igd::{mapping_port};
 use crate::messaging::crypto::crypto::{prepare_pubkey, get_aes_key};
 
 
@@ -94,8 +96,14 @@ impl MessagingClient {
         let peer = wait_for_peer(&socket, &incoming)?;
         let aes_key = get_aes_key(keypair, &peer);
 
-        //punching hole throught NAT
-        hole_punching(&socket, &peer, &incoming)?;
+        match msg.method {
+            //punching hole throught NAT
+            ConnectionMethod::Hole => hole_punching(&socket, &peer, &incoming)?,
+            //setup port forwarding
+            ConnectionMethod::Upnp => mapping_port(msg.source_port, msg.destination_port, &incoming)?,
+
+        }
+
 
         Ok(Self {
             socket: Arc::new(socket),

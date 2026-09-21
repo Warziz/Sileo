@@ -7,12 +7,13 @@ use std::str;
 
 use x25519_dalek::PublicKey;
 use base64::{engine::general_purpose, Engine as _};
+use local_ip_address::local_ip;
 
 use crate::messaging::network::peer::{PeerInfo};
 use crate::messaging::crypto::aes::{decrypt, encrypt};
 use crate::messaging::utils::event::BackendEvent;
 
-/// Generate a socket (UDP) on 0.0.0.0 and a choosen port.
+/// Generate a socket (UDP) on local_ip and a choosen port.
 /// 
 /// # Arguments
 /// 
@@ -23,7 +24,8 @@ use crate::messaging::utils::event::BackendEvent;
 /// A udp socket
 pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
     
-    let addr = format!("0.0.0.0:{}",port);
+    let local_ip = local_ip().unwrap();
+    let addr = format!("{}:{}",local_ip,port);
     let socket = UdpSocket::bind(addr)?;
     socket.set_nonblocking(false)?; 
     Ok(socket)
