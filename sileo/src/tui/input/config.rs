@@ -36,7 +36,7 @@ pub fn handle(key: KeyEvent, state: &mut AppState) {
             },
 
             ConfigField::Method => match key.code {
-                KeyCode::Left | KeyCode::Right | KeyCode::Enter => {
+                KeyCode::Enter | KeyCode::Char(' ') => {
                     state.cycle_method();
                     state.input_mode = InputMode::Normal;
                 }

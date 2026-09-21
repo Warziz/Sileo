@@ -61,7 +61,7 @@ impl AppState {
     pub fn cycle_method(&mut self) {
         self.method = match self.method {
             ConnectionMethod::Hole => ConnectionMethod::Upnp,
-            ConnectionMethod::Upnp => ConnectionMethod::Upnp,
+            ConnectionMethod::Upnp => ConnectionMethod::Hole,
 
         };
     }
