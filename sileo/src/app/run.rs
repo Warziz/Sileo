@@ -35,7 +35,7 @@ impl App {
                         self.state.screen = Screen::Config;
                     }
                     Action::Quit => {
-                        break Ok(());
+                        break Ok(()); //Remplaer par une fonction qui clean
                     }
                 }
             }

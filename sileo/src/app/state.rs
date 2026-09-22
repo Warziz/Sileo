@@ -4,6 +4,7 @@ use crate::messaging::utils::{connection::ConnectionMethod, event::BackendEvent}
 use crate::messaging::config::Config;
 
 use std::sync::mpsc::{Receiver, Sender};
+use std::thread::JoinHandle;
 
 /// Represents the different screens of the application.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -112,6 +113,9 @@ pub struct AppState {
 
     /// Channel used by the backend to receive outgoing messages.
     pub rx_to_backend: Option<Receiver<String>>,
+
+    /// Vector for containing thread handler.
+    pub handler: Vec<JoinHandle<()>>,
 }
 
 /// Represents the editable fields in the configuration screen.
@@ -184,6 +188,7 @@ impl AppState {
             rx_from_backend,
             tx_from_backend,
             rx_to_backend: Some(rx_to_backend),
+            handler:Vec::new(),
         }
     }
 

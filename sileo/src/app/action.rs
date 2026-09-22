@@ -1,5 +1,6 @@
 
 use std::thread;
+use::std::mem;
 
 use crate::app::state::{AppState, Screen};
 use crate::messaging::utils::connection::ConnectionMethod;
@@ -23,7 +24,7 @@ impl AppState {
                 let tx_logs = self.tx_from_backend.clone();
                 let rx_backend = self.rx_to_backend.take().expect("Backend already started");
 
-                thread::spawn(move || {
+                self.handler.push(thread::spawn(move || {
                     tx_logs.send(BackendEvent::Log("Backend starting...".to_string())).ok();
 
                     match MessagingClient::new(config, tx_logs.clone(), rx_backend){
@@ -36,7 +37,7 @@ impl AppState {
                         }
                     }
 
-                });
+                }));
             }
             Err(err) => {
                 self.error_message = Some(err);
@@ -48,6 +49,12 @@ impl AppState {
     /// Returns to the welcome screen.
     pub fn quit_to_welcome(&mut self) {
         self.screen = Screen::Welcome;
+
+        let handler = mem::take(&mut self.handler);
+
+        for handle in handler.into_iter() {
+            handle.join().expect("Failed to join");
+        }
     }
 
 

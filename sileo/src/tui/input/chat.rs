@@ -1,11 +1,11 @@
 use crossterm::event::{KeyEvent, KeyCode, KeyEventKind};
-use crate::app::state::{AppState, InputMode, Screen};
+use crate::app::state::{AppState, InputMode};
 
 pub fn handle(key: KeyEvent, state: &mut AppState) {
     match state.input_mode {
         InputMode::Normal => match key.code {
             KeyCode::Char('e') => state.input_mode = InputMode::Editing,
-            KeyCode::Char('q') => state.screen = Screen::Welcome,
+            KeyCode::Char('q') => state.quit_to_welcome(),
             KeyCode::Up => {
                 state.vertical_scroll = state.vertical_scroll.saturating_sub(10);
             },

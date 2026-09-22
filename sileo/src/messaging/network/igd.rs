@@ -23,10 +23,21 @@ pub fn mapping_port(source_port: Option<u16>, destination_port: Option<u16>, inc
     let mut local_addr = local_addr;
 
     local_addr.set_port(source_port);
-    gateway.add_port(igd::PortMappingProtocol::TCP,destination_port, local_addr, 60, "Sileo")?;
+    gateway.add_port(igd::PortMappingProtocol::UDP,destination_port, local_addr, 60, "Sileo")?;
     let msg = format!("Mapping port {} -> {}",destination_port,source_port);
     incoming.send(BackendEvent::Log(msg)).ok();
 
     Ok(())
           
+}
+
+pub fn remove_mapping(destination_port: Option<u16>) -> igd_next::Result<()>{
+
+    println!("Trying to delete port mapping");
+
+    let destination_port = destination_port.unwrap();
+    let gateway =  igd::search_gateway(Default::default())?;
+    gateway.remove_port(igd::PortMappingProtocol::UDP, destination_port)?;
+    Ok(()) 
+
 }
