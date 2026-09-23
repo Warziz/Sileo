@@ -1,8 +1,10 @@
 use ratatui::widgets::ScrollbarState;
 
+use crate::messaging::client::MessagingClient;
 use crate::messaging::utils::{connection::ConnectionMethod, event::BackendEvent};
 use crate::messaging::config::Config;
 
+use std::sync::{Arc,Mutex};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
 
@@ -116,6 +118,8 @@ pub struct AppState {
 
     /// Vector for containing thread handler.
     pub handler: Vec<JoinHandle<()>>,
+
+    pub client: Option<Arc<Mutex<MessagingClient>>>,
 }
 
 /// Represents the editable fields in the configuration screen.
@@ -188,7 +192,8 @@ impl AppState {
             rx_from_backend,
             tx_from_backend,
             rx_to_backend: Some(rx_to_backend),
-            handler:Vec::new(),
+            handler: Vec::new(),
+            client: None,
         }
     }
 

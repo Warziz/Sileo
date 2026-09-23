@@ -1,7 +1,8 @@
 use std::net::{UdpSocket};
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::Arc;
+use std::mem;
 
 use crate::messaging::config::Config;
 use crate::messaging::network::peer::PeerInfo;
@@ -30,6 +31,8 @@ pub struct MessagingClient {
     incoming: Sender<BackendEvent>,
     /// Channel used to receive outgoing messages from the TUI.
     outgoing: Option<Receiver<String>>,
+    /// Vector for containing thread handler.
+    handle:Vec<JoinHandle<()>>,
 }
 
 impl MessagingClient {
@@ -104,13 +107,13 @@ impl MessagingClient {
 
         }
 
-
         Ok(Self {
             socket: Arc::new(socket),
             peer: Arc::new(peer),
             aes_key: Arc::new(aes_key),
             incoming,
-            outgoing: Some(outgoing)
+            outgoing: Some(outgoing),
+            handle: Vec::new()
         })
     }
 
@@ -141,9 +144,9 @@ impl MessagingClient {
             let aes_key = Arc::clone(&aes_key);
             let incoming = incoming;
 
-            thread::spawn(move || {
+            self.handle.push (thread::spawn(move || {
                 listener(socket_recv, aes_key, peer, incoming);
-            });
+            }));
         }
 
         //sender thread
@@ -151,11 +154,20 @@ impl MessagingClient {
             let peer = Arc::clone(&peer);
             let aes_key = Arc::clone(&aes_key);
 
-            thread::spawn(move || {
+            self.handle.push(thread::spawn(move || {
                 while let Ok(msg) = outgoing.recv() {
                     send_message(&socket_send, &peer, &aes_key, msg);
                 }
-            });
+            }));
         }
     }
+
+    pub fn stop(&mut self){
+
+        let handler = mem::take(&mut self.handle);
+        for handle in handler.into_iter(){
+            handle.join().expect("Failed to join");
+        }
+    }
+
 }

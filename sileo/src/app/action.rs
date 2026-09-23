@@ -1,10 +1,11 @@
 
+use std::sync::{Arc,Mutex};
 use std::thread;
 use::std::mem;
 
 use crate::app::state::{AppState, Screen};
 use crate::messaging::utils::connection::ConnectionMethod;
-use crate::messaging::client::MessagingClient;
+use crate::messaging::client::{MessagingClient};
 use crate::messaging::utils::event::BackendEvent;
 
 impl AppState {
@@ -24,19 +25,23 @@ impl AppState {
                 let tx_logs = self.tx_from_backend.clone();
                 let rx_backend = self.rx_to_backend.take().expect("Backend already started");
 
+                let msg_client = match MessagingClient::new(config, tx_logs.clone(), rx_backend){
+                    Ok(client) => client,
+                    Err(err) => {
+                        self.tx_from_backend.send(BackendEvent::Error(err.to_string())).ok();
+                        return;
+                    }
+                };
+
+                self.client = Some(Arc::new(Mutex::new(msg_client)));
+                let client = self.client.clone().unwrap();
+
+
                 self.handler.push(thread::spawn(move || {
                     tx_logs.send(BackendEvent::Log("Backend starting...".to_string())).ok();
-
-                    match MessagingClient::new(config, tx_logs.clone(), rx_backend){
-                        Ok(mut client) => {
-                            tx_logs.send(BackendEvent::Log("Connected to peer".to_string())).ok();
-                            client.start();
-                        }
-                        Err(err) => {
-                            tx_logs.send(BackendEvent::Error(err.to_string())).ok();
-                        }
-                    }
-
+                    tx_logs.send(BackendEvent::Log("Connected to peer".to_string())).ok();
+                    let mut locked_client = client.lock().unwrap();        
+                    locked_client.start();
                 }));
             }
             Err(err) => {
@@ -48,13 +53,33 @@ impl AppState {
     
     /// Returns to the welcome screen.
     pub fn quit_to_welcome(&mut self) {
-        self.screen = Screen::Welcome;
 
-        let handler = mem::take(&mut self.handler);
+        if self.client.is_none() {
+            
+            self.screen = Screen::Welcome
+        
+        } else {
 
-        for handle in handler.into_iter() {
-            handle.join().expect("Failed to join");
+            // shutdown all the threads
+            let client = self.client.clone().unwrap();
+            let mut locked_client = client.lock().unwrap();
+            
+            // stop the threads listener and sender
+            locked_client.stop();
+
+            let handler = mem::take(&mut self.handler);
+
+            for handle in handler.into_iter() {
+                handle.join().expect("Failed to join");
+            }
+            // reset client
+            self.client = None;
+            self.screen = Screen::Welcome;
         }
+
+
+
+
     }
 
 
