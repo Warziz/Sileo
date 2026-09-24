@@ -33,6 +33,8 @@ pub struct MessagingClient {
     outgoing: Option<Receiver<String>>,
     /// Vector for containing thread handler.
     handle:Vec<JoinHandle<()>>,
+    /// destination port is use to be mapped in your router.
+    pub destination_port: u16, 
 }
 
 impl MessagingClient {
@@ -113,7 +115,8 @@ impl MessagingClient {
             aes_key: Arc::new(aes_key),
             incoming,
             outgoing: Some(outgoing),
-            handle: Vec::new()
+            handle: Vec::new(),
+            destination_port: config.destination_port
         })
     }
 

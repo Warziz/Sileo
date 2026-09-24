@@ -31,11 +31,10 @@ pub fn mapping_port(source_port: Option<u16>, destination_port: Option<u16>, inc
           
 }
 
-pub fn remove_mapping(destination_port: Option<u16>) -> igd_next::Result<()>{
+pub fn remove_mapping(destination_port:u16) -> igd_next::Result<()>{
 
     println!("Trying to delete port mapping");
 
-    let destination_port = destination_port.unwrap();
     let gateway =  igd::search_gateway(Default::default())?;
     gateway.remove_port(igd::PortMappingProtocol::UDP, destination_port)?;
     Ok(()) 

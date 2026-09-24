@@ -5,8 +5,9 @@ use::std::mem;
 
 use crate::app::state::{AppState, Screen};
 use crate::messaging::utils::connection::ConnectionMethod;
-use crate::messaging::client::{MessagingClient};
 use crate::messaging::utils::event::BackendEvent;
+use crate::messaging::client::{MessagingClient};
+use crate::messaging::network::igd::remove_mapping;
 
 impl AppState {
 
@@ -63,7 +64,7 @@ impl AppState {
             // shutdown all the threads
             let client = self.client.clone().unwrap();
             let mut locked_client = client.lock().unwrap();
-            
+            let destination = locked_client.destination_port;
             // stop the threads listener and sender
             locked_client.stop();
 
@@ -72,6 +73,12 @@ impl AppState {
             for handle in handler.into_iter() {
                 handle.join().expect("Failed to join");
             }
+            
+            // change the print
+            match remove_mapping(destination){
+                Ok(()) => println!("Successfully unmapping the port"),
+                Err(e) =>  println!("Error while removing the mapped port: {e:?}"),
+            };
             // reset client
             self.client = None;
             self.screen = Screen::Welcome;
