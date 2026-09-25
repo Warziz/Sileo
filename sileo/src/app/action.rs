@@ -68,12 +68,13 @@ impl AppState {
             // stop the threads listener and sender
             locked_client.stop();
 
+            /* 
             let handler = mem::take(&mut self.handler);
 
             for handle in handler.into_iter() {
                 handle.join().expect("Failed to join");
             }
-            
+            */
             // change the print
             match remove_mapping(destination){
                 Ok(()) => println!("Successfully unmapping the port"),
