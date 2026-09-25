@@ -1,8 +1,10 @@
 use std::net::{UdpSocket};
-use std::io;
+use std::io::{self, ErrorKind};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc};
 use std::str;
+use std::time::Duration;
 
 
 use x25519_dalek::PublicKey;
@@ -42,73 +44,86 @@ pub fn init_sock(port: u16) -> io::Result<UdpSocket> {
 /// * `aes_key` - A 32-byte AES-256 key, should be "Arced".
 /// * `peer` - A structure that contain all the peer info needed, should be "Arced".
 /// * `incoming` - A sender channel use to communicate with the TUI. BackendEvent is an enum to classify messages.
-pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, incoming: Sender<BackendEvent>){
+pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, incoming: Sender<BackendEvent>, stop: Arc<AtomicBool>){
 
         let mut buffer = [0; 1024];
         let peer = Arc::clone(&peer);
-    
+        socket.set_read_timeout(Some(Duration::from_secs(1))).expect("set_read_timeout failed");
+
             loop {
 
-                if let Ok((len, _)) = socket.recv_from(&mut buffer){
-                    let data = &buffer[..len];
+                match socket.recv_from(&mut buffer){
+                    Ok((len,_)) => {
+                        let data = &buffer[..len];
                     
-                    if data.is_empty(){
-                        continue;
-                    }
+                        if data.is_empty(){
+                            continue;
+                        }
                     
-                    let msg_type = data[0];
+                        let msg_type = data[0];
 
-                    match msg_type {
-                        0x01 => {
-                            let payload = &data[1..];
-                            if payload.len() < 12 {
-                                continue;
-                            }
-                            //Get nonce & cipher_text
-                            let (nonce_slice, ciphertext) = payload.split_at(12);
-                            let nonce: [u8; 12] = match nonce_slice.try_into() {
-                                Ok(n) => n,
-                                Err(_) => {
-                                    eprintln!("Invalid nonce length");
+                        match msg_type {
+                            0x01 => {
+                                let payload = &data[1..];
+                                if payload.len() < 12 {
                                     continue;
                                 }
-                            };
-
-                            //decipher the message
-                            let plain = decrypt(&aes_key, ciphertext, &nonce);
-                            let message = match String::from_utf8(plain) {
-                                Ok(m) => m,
+                                //Get nonce & cipher_text
+                                let (nonce_slice, ciphertext) = payload.split_at(12);
+                                let nonce: [u8; 12] = match nonce_slice.try_into() {
+                                    Ok(n) => n,
                                     Err(_) => {
-                                    eprintln!("Invalid UTF-8 in decrypted message");
-                                    return;
-                                }
-                            };
-                            
-                            //send the message to the TUI 
-                            let _ = incoming.send(BackendEvent::PeerMessage { username: peer.peer_username.clone(), message });
-                        
-                        }
+                                        eprintln!("Invalid nonce length");
+                                        continue;
+                                    }
+                                };
 
-                        0x02 => {
-                            //this part is made to do the hole without loosing the first message of the peer.
-                            //just checking if the message is CTRL:PUNCH
-                            let payload = &data[1..];
-                            let message = match std::str::from_utf8(payload) {
-                                Ok(m) => m,
-                                Err(_) => {
-                                    eprintln!("Invalid UTF-8 in CTRL message");
+                                //decipher the message
+                                let plain = decrypt(&aes_key, ciphertext, &nonce);
+                                let message = match String::from_utf8(plain) {
+                                    Ok(m) => m,
+                                        Err(_) => {
+                                        eprintln!("Invalid UTF-8 in decrypted message");
+                                        return;
+                                    }
+                                };
+                            
+                                //send the message to the TUI 
+                                let _ = incoming.send(BackendEvent::PeerMessage { username: peer.peer_username.clone(), message });
+                        
+                            }
+
+                            0x02 => {
+                                //this part is made to do the hole without loosing the first message of the peer.
+                                //just checking if the message is CTRL:PUNCH
+                                let payload = &data[1..];
+                                let message = match std::str::from_utf8(payload) {
+                                    Ok(m) => m,
+                                    Err(_) => {
+                                        eprintln!("Invalid UTF-8 in CTRL message");
+                                        continue;
+                                    }
+                                };
+
+                                if message.trim() == "CTRL:PUNCH" {
                                     continue;
                                 }
-                            };
-
-                            if message.trim() == "CTRL:PUNCH" {
-                                continue;
                             }
-                        }
 
-                        _ => continue,
+                            _ => continue,
+                        }
                     }
-                    
+                Err(e) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut => {
+                    // ajoute check stop ici
+                    let check = stop.load(Ordering::Relaxed);
+                    if check == true {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{:?}",e);
+                    break;
+                }  
             }
         }
 }

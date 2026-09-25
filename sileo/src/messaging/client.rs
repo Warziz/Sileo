@@ -2,6 +2,7 @@ use std::net::{UdpSocket};
 use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool,Ordering};
 use std::mem;
 
 use crate::messaging::config::Config;
@@ -34,7 +35,9 @@ pub struct MessagingClient {
     /// Vector for containing thread handler.
     handle:Vec<JoinHandle<()>>,
     /// destination port is use to be mapped in your router.
-    pub destination_port: u16, 
+    pub destination_port: u16,
+    /// Check for listener if it should stop. 
+    stop: Arc<AtomicBool>,
 }
 
 impl MessagingClient {
@@ -63,6 +66,9 @@ impl MessagingClient {
         incoming: Sender<BackendEvent>,
         outgoing: Receiver<String>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
+
+        //initiate stop value
+        let stop = Arc::new(AtomicBool::new(false));
 
         //initiate socket and server addresse
         let socket = init_sock(config.source_port)?;
@@ -116,7 +122,8 @@ impl MessagingClient {
             incoming,
             outgoing: Some(outgoing),
             handle: Vec::new(),
-            destination_port: config.destination_port
+            destination_port: config.destination_port,
+            stop
         })
     }
 
@@ -141,6 +148,8 @@ impl MessagingClient {
         let incoming = self.incoming.clone();
         let outgoing = self.outgoing.take().expect("outgoing already taken");
 
+        let stop = self.stop.clone();
+
         //recieve thread
         {
             let peer = Arc::clone(&peer);
@@ -148,7 +157,7 @@ impl MessagingClient {
             let incoming = incoming;
 
             self.handle.push (thread::spawn(move || {
-                listener(socket_recv, aes_key, peer, incoming);
+                listener(socket_recv, aes_key, peer, incoming,stop);
             }));
         }
 
@@ -167,6 +176,7 @@ impl MessagingClient {
 
     pub fn stop(&mut self){
 
+        self.stop.store(true, Ordering::Relaxed);
         let handler = mem::take(&mut self.handle);
         for handle in handler.into_iter(){
             handle.join().expect("Failed to join");
