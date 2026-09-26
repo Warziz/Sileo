@@ -105,7 +105,7 @@ pub struct AppState {
     pub pending_action: Option<Action>,
 
     /// Channel used to send messages to the backend.
-    pub tx_to_backend: Sender<String>,
+    pub tx_to_backend: Option<Sender<String>>,
 
     /// Channel used to receive events from the backend.
     pub rx_from_backend: Receiver<BackendEvent>,
@@ -157,10 +157,8 @@ impl AppState {
     ///
     /// Backend communication channels must be provided at initialization.
     pub fn new(
-        tx_to_backend: Sender<String>,
         rx_from_backend: Receiver<BackendEvent>,
         tx_from_backend: Sender<BackendEvent>,
-        rx_to_backend: Receiver<String>,
     ) -> Self {
         Self {
             screen: Screen::Welcome,
@@ -188,10 +186,10 @@ impl AppState {
             selected_field: 11,
             pending_action: None,
 
-            tx_to_backend,
+            tx_to_backend: None,
             rx_from_backend,
             tx_from_backend,
-            rx_to_backend: Some(rx_to_backend),
+            rx_to_backend: None,
             handler: Vec::new(),
             client: None,
         }

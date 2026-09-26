@@ -1,5 +1,6 @@
 
 use std::sync::{Arc,Mutex};
+use std::sync::mpsc::channel;
 use std::thread;
 use::std::mem;
 
@@ -18,6 +19,12 @@ impl AppState {
     /// the messaging backend and handling network communication.
     pub fn start_chat(&mut self) {
         
+        // Create communication channels
+        // TUI -> backend
+        let (tx_to_backend, rx_to_backend) = channel::<String>();
+        self.tx_to_backend = Some(tx_to_backend);
+        self.rx_to_backend = Some(rx_to_backend);
+
         match self.build_config() {
             Ok(config) => {
 
@@ -61,6 +68,9 @@ impl AppState {
         
         } else {
 
+            // shutdown the tx_to_backend and rx_to_backend
+            self.tx_to_backend = None;
+
             // shutdown all the threads
             let client = self.client.clone().unwrap();
             let mut locked_client = client.lock().unwrap();
@@ -68,17 +78,17 @@ impl AppState {
             // stop the threads listener and sender
             locked_client.stop();
 
-            /* 
+            
             let handler = mem::take(&mut self.handler);
 
             for handle in handler.into_iter() {
                 handle.join().expect("Failed to join");
             }
-            */
+            
             // change the print
             match remove_mapping(destination){
                 Ok(()) => println!("Successfully unmapping the port"),
-                Err(e) =>  println!("Error while removing the mapped port: {e:?}"),
+                Err(e) =>  eprintln!("Error while removing the mapped port: {e:?}"),
             };
             // reset client
             self.client = None;
@@ -118,7 +128,7 @@ impl AppState {
         self.vertical_scroll + self.visible_height >= self.messages.len();
 
         // send to backend
-        let _ = self.tx_to_backend.send(msg.clone());
+        let _ = self.tx_to_backend.as_ref().unwrap().send(msg.clone());
   
         // print it to tui
         self.messages.push(format!("You: {}", msg));
