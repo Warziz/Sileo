@@ -88,9 +88,10 @@ impl AppState {
             for handle in handler.into_iter() {
                 handle.join().expect("Failed to join");
             }
-            
+
+            let tx_logs = self.tx_from_backend.clone();
             // change the print
-            match remove_mapping(destination){
+            match remove_mapping(destination,&tx_logs){
                 Ok(()) => println!("Successfully unmapping the port"),
                 Err(e) =>  eprintln!("Error while removing the mapped port: {e:?}"),
             };
