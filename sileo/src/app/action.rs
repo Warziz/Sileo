@@ -33,24 +33,28 @@ impl AppState {
                 let tx_logs = self.tx_from_backend.clone();
                 let rx_backend = self.rx_to_backend.take().expect("Backend already started");
 
-                let msg_client = match MessagingClient::new(config, tx_logs.clone(), rx_backend){
-                    Ok(client) => client,
-                    Err(err) => {
-                        self.tx_from_backend.send(BackendEvent::Error(err.to_string())).ok();
-                        return;
-                    }
-                };
-
-                self.client = Some(Arc::new(Mutex::new(msg_client)));
-                let client = self.client.clone().unwrap();
-
-
                 self.handler.push(thread::spawn(move || {
+
+                    let msg_client = match MessagingClient::new(config, tx_logs.clone(), rx_backend){
+                        Ok(client) => client,
+                        Err(err) => {
+                            tx_logs.send(BackendEvent::Error(err.to_string())).ok();
+                            return;
+                        }
+                    };
+
+                    let opt_client = Arc::new(Mutex::new(msg_client));
+                    let client = opt_client.clone();
+
+
                     tx_logs.send(BackendEvent::Log("Backend starting...".to_string())).ok();
                     tx_logs.send(BackendEvent::Log("Connected to peer".to_string())).ok();
+                    tx_logs.send(BackendEvent::MessagingClient(opt_client)).ok();
                     let mut locked_client = client.lock().unwrap();        
                     locked_client.start();
                 }));
+
+
             }
             Err(err) => {
                 self.error_message = Some(err);
@@ -170,6 +174,10 @@ impl AppState {
 
                 BackendEvent::Error(err) => {
                     self.messages.push(format!("[ERROR]: {}", err));
+                }
+
+                BackendEvent::MessagingClient(client) => {
+                    self.client = Some(client);
                 }
             }
 

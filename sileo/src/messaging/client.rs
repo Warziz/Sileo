@@ -21,6 +21,7 @@ use crate::messaging::crypto::crypto::{prepare_pubkey, get_aes_key};
 /// `MessagingClient` acts as the interface between the backend logic
 /// and the TUI. It manages network communication, key exchange,
 /// encryption, and message dispatching.
+#[derive(Debug)]
 pub struct MessagingClient {
     /// UDP socket used for sending and receiving packets.
     socket: Arc<UdpSocket>,
