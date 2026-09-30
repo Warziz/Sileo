@@ -12,7 +12,7 @@ use crate::messaging::utils::event::BackendEvent;
 use crate::messaging::utils::message::{Message,MessageType};
 use crate::messaging::network::chat::{init_sock, listener, send_message, wait_for_peer};
 use crate::messaging::network::hole_punching::{hole_punching};
-use crate::messaging::network::igd::{mapping_port};
+use crate::messaging::network::igd::{mapping_port,remove_mapping};
 use crate::messaging::crypto::crypto::{prepare_pubkey, get_aes_key};
 
 
@@ -36,7 +36,7 @@ pub struct MessagingClient {
     /// Vector for containing thread handler.
     handle:Vec<JoinHandle<()>>,
     /// destination port is use to be mapped in your router.
-    pub destination_port: u16,
+    destination_port: u16,
     /// Check for listener if it should stop. 
     stop: Arc<AtomicBool>,
 }
@@ -75,6 +75,11 @@ impl MessagingClient {
         let socket = init_sock(config.source_port)?;
         let rendezvous_ip = format!("{}:{}", config.server_ip, config.server_port);
 
+        if config.method == ConnectionMethod::Upnp {
+            //setup port forwarding if upnp activated
+            mapping_port(config.source_port, config.destination_port, &incoming)?;
+        }
+
         incoming.send(BackendEvent::Log(format!("Trying to connect to {}",rendezvous_ip))).ok();
 
         //generate pubkey for prepare encryption     
@@ -108,11 +113,9 @@ impl MessagingClient {
         let peer = wait_for_peer(&socket, &incoming)?;
         let aes_key = get_aes_key(keypair, &peer);
 
-        match msg.method {
+        if config.method == ConnectionMethod::Hole {
             //punching hole throught NAT
-            ConnectionMethod::Hole => hole_punching(&socket, &peer, &incoming)?,
-            //setup port forwarding
-            ConnectionMethod::Upnp => mapping_port(msg.source_port, msg.destination_port, &incoming)?,
+            hole_punching(&socket, &peer, &incoming)?;
 
         }
 
@@ -175,7 +178,21 @@ impl MessagingClient {
         }
     }
 
-    pub fn stop(&mut self){
+    pub fn stop(&mut self, method:ConnectionMethod){
+
+        let tx_logs = self.incoming.clone();
+
+        if method == ConnectionMethod::Upnp {
+            match remove_mapping(self.destination_port,&tx_logs){
+                Ok(()) => {
+                    self.incoming.send(BackendEvent::Log("Successfully unmapping the port".to_string())).ok();
+                }
+                Err(e) =>  {
+                    let msg = format!("Error while removing the mapped port: {e:?}");
+                    self.incoming.send(BackendEvent::Error(msg)).ok();
+                }
+            };
+        }
 
         self.stop.store(true, Ordering::Relaxed);
         let handler = mem::take(&mut self.handle);

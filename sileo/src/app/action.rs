@@ -4,6 +4,7 @@ use std::sync::mpsc::channel;
 use std::thread;
 use::std::mem;
 
+use std::sync::atomic::{Ordering};
 use crate::app::state::{AppState, Screen};
 use crate::messaging::utils::connection::ConnectionMethod;
 use crate::messaging::utils::event::BackendEvent;
@@ -32,9 +33,12 @@ impl AppState {
 
                 let tx_logs = self.tx_from_backend.clone();
                 let rx_backend = self.rx_to_backend.take().expect("Backend already started");
-
+                let check  = self.check.clone();
+                check.store(1, Ordering::Relaxed);
                 self.handler.push(thread::spawn(move || {
 
+                    
+                    tx_logs.send(BackendEvent::Log("Backend starting...".to_string())).ok();
                     let msg_client = match MessagingClient::new(config, tx_logs.clone(), rx_backend){
                         Ok(client) => client,
                         Err(err) => {
@@ -43,12 +47,14 @@ impl AppState {
                         }
                     };
 
+                    // client instance use to fill self.client
                     let opt_client = Arc::new(Mutex::new(msg_client));
+                    // client instance for start() the chat
                     let client = opt_client.clone();
 
-
-                    tx_logs.send(BackendEvent::Log("Backend starting...".to_string())).ok();
                     tx_logs.send(BackendEvent::Log("Connected to peer".to_string())).ok();
+                    check.store(2, Ordering::Relaxed);
+                    
                     tx_logs.send(BackendEvent::MessagingClient(opt_client)).ok();
                     let mut locked_client = client.lock().unwrap();        
                     locked_client.start();
@@ -66,22 +72,48 @@ impl AppState {
     /// Returns to the welcome screen.
     pub fn quit_to_welcome(&mut self) {
 
-        if self.client.is_none() {
+        let check = self.check.load(Ordering::Relaxed);
+        if check == 0 {
             
             self.screen = Screen::Welcome
         
+        } else if check == 1 {
+
+            if self.method == ConnectionMethod::Upnp {
+                match self.destination_port.parse::<u16>() {
+                    Ok(destination_port) => {
+                        match remove_mapping(destination_port,&self.tx_from_backend){
+                            Ok(()) => {
+                                self.tx_from_backend.send(BackendEvent::Log("Successfully unmapping the port".to_string())).ok();
+                            }
+                            Err(e) =>  {
+                                let msg = format!("Error while removing the mapped port: {e:?}");
+                                self.tx_from_backend.send(BackendEvent::Error(msg)).ok();
+                            }
+                        };
+                    }
+                    Err(_) => {
+                        self.tx_from_backend.send(BackendEvent::Error("Invalide Destination port".to_string())).ok();
+                    }
+                }
+                
+            }
+
+            // reset client
+            self.check.store(0, Ordering::Relaxed);
+            self.screen = Screen::Welcome;
+        
         } else {
+
+            // get client instance for reaching destination_port and stop() method.
+            let client = self.client.clone().unwrap();
+            let mut locked_client = client.lock().unwrap();
 
             // shutdown the tx_to_backend and rx_to_backend
             self.tx_to_backend = None;
-
-            // shutdown all the threads
-            let client = self.client.clone().unwrap();
-            let mut locked_client = client.lock().unwrap();
-            let destination = locked_client.destination_port;
             // stop the threads listener and sender
-            locked_client.stop();
-
+            locked_client.stop(self.method);
+            drop(locked_client);
             
             let handler = mem::take(&mut self.handler);
 
@@ -89,18 +121,11 @@ impl AppState {
                 handle.join().expect("Failed to join");
             }
 
-            let tx_logs = self.tx_from_backend.clone();
-            // change the print
-            match remove_mapping(destination,&tx_logs){
-                Ok(()) => println!("Successfully unmapping the port"),
-                Err(e) =>  eprintln!("Error while removing the mapped port: {e:?}"),
-            };
             // reset client
             self.client = None;
+            self.check.store(0, Ordering::Relaxed);
             self.screen = Screen::Welcome;
         }
-
-
 
 
     }

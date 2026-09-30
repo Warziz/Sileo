@@ -4,6 +4,7 @@ use crate::messaging::client::MessagingClient;
 use crate::messaging::utils::{connection::ConnectionMethod, event::BackendEvent};
 use crate::messaging::config::Config;
 
+use std::sync::atomic::AtomicU8;
 use std::sync::{Arc,Mutex};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
@@ -35,6 +36,7 @@ pub enum Action {
     /// Quit the application.
     Quit,
 }
+
 
 /// Holds the complete state of the application.
 ///
@@ -119,7 +121,11 @@ pub struct AppState {
     /// Vector for containing thread handler.
     pub handler: Vec<JoinHandle<()>>,
 
+    /// Instance of messaging client
     pub client: Option<Arc<Mutex<MessagingClient>>>,
+
+    /// Use for control the connection status of the client, 0: free, 1: waiting, 2: lock
+    pub check: Arc<AtomicU8>,
 }
 
 /// Represents the editable fields in the configuration screen.
@@ -192,6 +198,7 @@ impl AppState {
             rx_to_backend: None,
             handler: Vec::new(),
             client: None,
+            check: Arc::new(AtomicU8::new(0)),
         }
     }
 

@@ -3,7 +3,7 @@ use std::str::FromStr;
 use serde::{Deserialize,Serialize};
 
 /// Defines the supported peer connection methods.
-#[derive(Deserialize,Serialize,Debug, Clone, Copy)]
+#[derive(Deserialize,Serialize,Debug, Clone, Copy, PartialEq)]
 pub enum ConnectionMethod {
      /// Establishes a connection using UDP hole punching only.
     Hole,
