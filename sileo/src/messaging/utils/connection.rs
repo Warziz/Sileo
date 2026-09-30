@@ -3,14 +3,12 @@ use std::str::FromStr;
 use serde::{Deserialize,Serialize};
 
 /// Defines the supported peer connection methods.
-#[derive(Deserialize,Serialize,Debug, Clone, Copy)]
+#[derive(Deserialize,Serialize,Debug, Clone, Copy, PartialEq)]
 pub enum ConnectionMethod {
      /// Establishes a connection using UDP hole punching only.
     Hole,
     /// Establishes a connection using UPnP port forwarding only.
     Upnp,
-    /// Attempts both hole punching and UPnP.
-    Both,
 }
 
 impl FromStr for ConnectionMethod {
@@ -31,9 +29,8 @@ impl FromStr for ConnectionMethod {
         match s.to_lowercase().as_str() {
             "hole" => Ok(ConnectionMethod::Hole),
             "upnp" => Ok(ConnectionMethod::Upnp),
-            "both" => Ok(ConnectionMethod::Both),
             _ => Err(format!(
-                "Invalid method '{}'. Use hole | upnp | both", s)),
+                "Invalid method '{}'. Use hole | upnp ", s)),
         }
     }
 }

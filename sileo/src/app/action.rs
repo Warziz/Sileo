@@ -1,10 +1,15 @@
 
+use std::sync::{Arc,Mutex};
+use std::sync::mpsc::channel;
 use std::thread;
+use::std::mem;
 
+use std::sync::atomic::{Ordering};
 use crate::app::state::{AppState, Screen};
 use crate::messaging::utils::connection::ConnectionMethod;
-use crate::messaging::client::MessagingClient;
 use crate::messaging::utils::event::BackendEvent;
+use crate::messaging::client::{MessagingClient};
+use crate::messaging::network::igd::remove_mapping;
 
 impl AppState {
 
@@ -15,6 +20,12 @@ impl AppState {
     /// the messaging backend and handling network communication.
     pub fn start_chat(&mut self) {
         
+        // Create communication channels
+        // TUI -> backend
+        let (tx_to_backend, rx_to_backend) = channel::<String>();
+        self.tx_to_backend = Some(tx_to_backend);
+        self.rx_to_backend = Some(rx_to_backend);
+
         match self.build_config() {
             Ok(config) => {
 
@@ -22,21 +33,34 @@ impl AppState {
 
                 let tx_logs = self.tx_from_backend.clone();
                 let rx_backend = self.rx_to_backend.take().expect("Backend already started");
+                let check  = self.check.clone();
+                check.store(1, Ordering::Relaxed);
+                self.handler.push(thread::spawn(move || {
 
-                thread::spawn(move || {
+                    
                     tx_logs.send(BackendEvent::Log("Backend starting...".to_string())).ok();
-
-                    match MessagingClient::new(config, tx_logs.clone(), rx_backend){
-                        Ok(mut client) => {
-                            tx_logs.send(BackendEvent::Log("Connected to peer".to_string())).ok();
-                            client.start();
-                        }
+                    let msg_client = match MessagingClient::new(config, tx_logs.clone(), rx_backend){
+                        Ok(client) => client,
                         Err(err) => {
                             tx_logs.send(BackendEvent::Error(err.to_string())).ok();
+                            return;
                         }
-                    }
+                    };
 
-                });
+                    // client instance use to fill self.client
+                    let opt_client = Arc::new(Mutex::new(msg_client));
+                    // client instance for start() the chat
+                    let client = opt_client.clone();
+
+                    tx_logs.send(BackendEvent::Log("Connected to peer".to_string())).ok();
+                    check.store(2, Ordering::Relaxed);
+                    
+                    tx_logs.send(BackendEvent::MessagingClient(opt_client)).ok();
+                    let mut locked_client = client.lock().unwrap();        
+                    locked_client.start();
+                }));
+
+
             }
             Err(err) => {
                 self.error_message = Some(err);
@@ -47,7 +71,63 @@ impl AppState {
     
     /// Returns to the welcome screen.
     pub fn quit_to_welcome(&mut self) {
-        self.screen = Screen::Welcome;
+
+        let check = self.check.load(Ordering::Relaxed);
+        if check == 0 {
+            
+            self.screen = Screen::Welcome
+        
+        } else if check == 1 {
+
+            if self.method == ConnectionMethod::Upnp {
+                match self.destination_port.parse::<u16>() {
+                    Ok(destination_port) => {
+                        match remove_mapping(destination_port,&self.tx_from_backend){
+                            Ok(()) => {
+                                self.tx_from_backend.send(BackendEvent::Log("Successfully unmapping the port".to_string())).ok();
+                            }
+                            Err(e) =>  {
+                                let msg = format!("Error while removing the mapped port: {e:?}");
+                                self.tx_from_backend.send(BackendEvent::Error(msg)).ok();
+                            }
+                        };
+                    }
+                    Err(_) => {
+                        self.tx_from_backend.send(BackendEvent::Error("Invalide Destination port".to_string())).ok();
+                    }
+                }
+                
+            }
+
+            // reset client
+            self.check.store(0, Ordering::Relaxed);
+            self.screen = Screen::Welcome;
+        
+        } else {
+
+            // get client instance for reaching destination_port and stop() method.
+            let client = self.client.clone().unwrap();
+            let mut locked_client = client.lock().unwrap();
+
+            // shutdown the tx_to_backend and rx_to_backend
+            self.tx_to_backend = None;
+            // stop the threads listener and sender
+            locked_client.stop(self.method);
+            drop(locked_client);
+            
+            let handler = mem::take(&mut self.handler);
+
+            for handle in handler.into_iter() {
+                handle.join().expect("Failed to join");
+            }
+
+            // reset client
+            self.client = None;
+            self.check.store(0, Ordering::Relaxed);
+            self.screen = Screen::Welcome;
+        }
+
+
     }
 
 
@@ -61,8 +141,8 @@ impl AppState {
     pub fn cycle_method(&mut self) {
         self.method = match self.method {
             ConnectionMethod::Hole => ConnectionMethod::Upnp,
-            ConnectionMethod::Upnp => ConnectionMethod::Both,
-            ConnectionMethod::Both => ConnectionMethod::Hole,
+            ConnectionMethod::Upnp => ConnectionMethod::Hole,
+
         };
     }
 
@@ -78,7 +158,7 @@ impl AppState {
         self.vertical_scroll + self.visible_height >= self.messages.len();
 
         // send to backend
-        let _ = self.tx_to_backend.send(msg.clone());
+        let _ = self.tx_to_backend.as_ref().unwrap().send(msg.clone());
   
         // print it to tui
         self.messages.push(format!("You: {}", msg));
@@ -120,6 +200,10 @@ impl AppState {
 
                 BackendEvent::Error(err) => {
                     self.messages.push(format!("[ERROR]: {}", err));
+                }
+
+                BackendEvent::MessagingClient(client) => {
+                    self.client = Some(client);
                 }
             }
 

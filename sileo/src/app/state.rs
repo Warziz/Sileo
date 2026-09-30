@@ -1,9 +1,13 @@
 use ratatui::widgets::ScrollbarState;
 
+use crate::messaging::client::MessagingClient;
 use crate::messaging::utils::{connection::ConnectionMethod, event::BackendEvent};
 use crate::messaging::config::Config;
 
+use std::sync::atomic::AtomicU8;
+use std::sync::{Arc,Mutex};
 use std::sync::mpsc::{Receiver, Sender};
+use std::thread::JoinHandle;
 
 /// Represents the different screens of the application.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -32,6 +36,7 @@ pub enum Action {
     /// Quit the application.
     Quit,
 }
+
 
 /// Holds the complete state of the application.
 ///
@@ -102,7 +107,7 @@ pub struct AppState {
     pub pending_action: Option<Action>,
 
     /// Channel used to send messages to the backend.
-    pub tx_to_backend: Sender<String>,
+    pub tx_to_backend: Option<Sender<String>>,
 
     /// Channel used to receive events from the backend.
     pub rx_from_backend: Receiver<BackendEvent>,
@@ -112,6 +117,15 @@ pub struct AppState {
 
     /// Channel used by the backend to receive outgoing messages.
     pub rx_to_backend: Option<Receiver<String>>,
+
+    /// Vector for containing thread handler.
+    pub handler: Vec<JoinHandle<()>>,
+
+    /// Instance of messaging client
+    pub client: Option<Arc<Mutex<MessagingClient>>>,
+
+    /// Use for control the connection status of the client, 0: free, 1: waiting, 2: lock
+    pub check: Arc<AtomicU8>,
 }
 
 /// Represents the editable fields in the configuration screen.
@@ -149,10 +163,8 @@ impl AppState {
     ///
     /// Backend communication channels must be provided at initialization.
     pub fn new(
-        tx_to_backend: Sender<String>,
         rx_from_backend: Receiver<BackendEvent>,
         tx_from_backend: Sender<BackendEvent>,
-        rx_to_backend: Receiver<String>,
     ) -> Self {
         Self {
             screen: Screen::Welcome,
@@ -180,10 +192,13 @@ impl AppState {
             selected_field: 11,
             pending_action: None,
 
-            tx_to_backend,
+            tx_to_backend: None,
             rx_from_backend,
             tx_from_backend,
-            rx_to_backend: Some(rx_to_backend),
+            rx_to_backend: None,
+            handler: Vec::new(),
+            client: None,
+            check: Arc::new(AtomicU8::new(0)),
         }
     }
 

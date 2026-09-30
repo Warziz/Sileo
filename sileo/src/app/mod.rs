@@ -13,14 +13,12 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(
-        tx_to_backend: Sender<String>, 
+    pub fn new( 
         rx_from_backend: Receiver<BackendEvent>,
         tx_from_backend: Sender<BackendEvent>,
-        rx_to_backend: Receiver<String>
     ) -> Self {
         Self {
-            state: AppState::new(tx_to_backend,rx_from_backend, tx_from_backend, rx_to_backend),
+            state: AppState::new(rx_from_backend, tx_from_backend),
 
         }
     }

@@ -1,14 +1,18 @@
 use std::net::{UdpSocket};
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool,Ordering};
+use std::mem;
 
 use crate::messaging::config::Config;
 use crate::messaging::network::peer::PeerInfo;
+use crate::messaging::utils::connection::ConnectionMethod;
 use crate::messaging::utils::event::BackendEvent;
 use crate::messaging::utils::message::{Message,MessageType};
 use crate::messaging::network::chat::{init_sock, listener, send_message, wait_for_peer};
 use crate::messaging::network::hole_punching::{hole_punching};
+use crate::messaging::network::igd::{mapping_port,remove_mapping};
 use crate::messaging::crypto::crypto::{prepare_pubkey, get_aes_key};
 
 
@@ -17,6 +21,7 @@ use crate::messaging::crypto::crypto::{prepare_pubkey, get_aes_key};
 /// `MessagingClient` acts as the interface between the backend logic
 /// and the TUI. It manages network communication, key exchange,
 /// encryption, and message dispatching.
+#[derive(Debug)]
 pub struct MessagingClient {
     /// UDP socket used for sending and receiving packets.
     socket: Arc<UdpSocket>,
@@ -28,6 +33,12 @@ pub struct MessagingClient {
     incoming: Sender<BackendEvent>,
     /// Channel used to receive outgoing messages from the TUI.
     outgoing: Option<Receiver<String>>,
+    /// Vector for containing thread handler.
+    handle:Vec<JoinHandle<()>>,
+    /// destination port is use to be mapped in your router.
+    destination_port: u16,
+    /// Check for listener if it should stop. 
+    stop: Arc<AtomicBool>,
 }
 
 impl MessagingClient {
@@ -57,9 +68,17 @@ impl MessagingClient {
         outgoing: Receiver<String>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
 
+        //initiate stop value
+        let stop = Arc::new(AtomicBool::new(false));
+
         //initiate socket and server addresse
         let socket = init_sock(config.source_port)?;
         let rendezvous_ip = format!("{}:{}", config.server_ip, config.server_port);
+
+        if config.method == ConnectionMethod::Upnp {
+            //setup port forwarding if upnp activated
+            mapping_port(config.source_port, config.destination_port, &incoming)?;
+        }
 
         incoming.send(BackendEvent::Log(format!("Trying to connect to {}",rendezvous_ip))).ok();
 
@@ -94,15 +113,21 @@ impl MessagingClient {
         let peer = wait_for_peer(&socket, &incoming)?;
         let aes_key = get_aes_key(keypair, &peer);
 
-        //punching hole throught NAT
-        hole_punching(&socket, &peer, &incoming)?;
+        if config.method == ConnectionMethod::Hole {
+            //punching hole throught NAT
+            hole_punching(&socket, &peer, &incoming)?;
+
+        }
 
         Ok(Self {
             socket: Arc::new(socket),
             peer: Arc::new(peer),
             aes_key: Arc::new(aes_key),
             incoming,
-            outgoing: Some(outgoing)
+            outgoing: Some(outgoing),
+            handle: Vec::new(),
+            destination_port: config.destination_port,
+            stop
         })
     }
 
@@ -127,15 +152,17 @@ impl MessagingClient {
         let incoming = self.incoming.clone();
         let outgoing = self.outgoing.take().expect("outgoing already taken");
 
+        let stop = self.stop.clone();
+
         //recieve thread
         {
             let peer = Arc::clone(&peer);
             let aes_key = Arc::clone(&aes_key);
             let incoming = incoming;
 
-            thread::spawn(move || {
-                listener(socket_recv, aes_key, peer, incoming);
-            });
+            self.handle.push (thread::spawn(move || {
+                listener(socket_recv, aes_key, peer, incoming,stop);
+            }));
         }
 
         //sender thread
@@ -143,11 +170,35 @@ impl MessagingClient {
             let peer = Arc::clone(&peer);
             let aes_key = Arc::clone(&aes_key);
 
-            thread::spawn(move || {
+            self.handle.push(thread::spawn(move || {
                 while let Ok(msg) = outgoing.recv() {
                     send_message(&socket_send, &peer, &aes_key, msg);
                 }
-            });
+            }));
         }
     }
+
+    pub fn stop(&mut self, method:ConnectionMethod){
+
+        let tx_logs = self.incoming.clone();
+
+        if method == ConnectionMethod::Upnp {
+            match remove_mapping(self.destination_port,&tx_logs){
+                Ok(()) => {
+                    self.incoming.send(BackendEvent::Log("Successfully unmapping the port".to_string())).ok();
+                }
+                Err(e) =>  {
+                    let msg = format!("Error while removing the mapped port: {e:?}");
+                    self.incoming.send(BackendEvent::Error(msg)).ok();
+                }
+            };
+        }
+
+        self.stop.store(true, Ordering::Relaxed);
+        let handler = mem::take(&mut self.handle);
+        for handle in handler.into_iter(){
+            handle.join().expect("Failed to join");
+        }
+    }
+
 }
