@@ -37,8 +37,8 @@ pub struct MessagingClient {
     handle:Vec<JoinHandle<()>>,
     /// destination port is use to be mapped in your router.
     destination_port: u16,
-    /// Check for listener if it should stop. 
-    stop: Arc<AtomicBool>,
+    /// Copy of stop value from AppData structure
+    stop: Arc<AtomicBool>
 }
 
 impl MessagingClient {
@@ -66,10 +66,9 @@ impl MessagingClient {
         config: Config, 
         incoming: Sender<BackendEvent>,
         outgoing: Receiver<String>,
+        stop: Arc<AtomicBool>, 
     ) -> Result<Self, Box<dyn std::error::Error>> {
 
-        //initiate stop value
-        let stop = Arc::new(AtomicBool::new(false));
 
         //initiate socket and server addresse
         let socket = init_sock(config.source_port)?;
@@ -110,7 +109,8 @@ impl MessagingClient {
         socket.send_to(serde_json::to_string(&msg)?.as_bytes(), &rendezvous_ip)?;
 
         //generate peer information in struct then generate AES key
-        let peer = wait_for_peer(&socket, &incoming)?;
+        let wfp_stop = stop.clone();
+        let peer = wait_for_peer(&socket, &incoming,wfp_stop)?;
         let aes_key = get_aes_key(keypair, &peer);
 
         if config.method == ConnectionMethod::Hole {

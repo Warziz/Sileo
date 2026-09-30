@@ -113,17 +113,17 @@ pub fn listener(socket: UdpSocket, aes_key: Arc<[u8; 32]>, peer: Arc<PeerInfo>, 
                             _ => continue,
                         }
                     }
-                Err(e) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut => {
-                    // ajoute check stop ici
-                    let check = stop.load(Ordering::Relaxed);
-                    if check == true {
-                        break;
+                    Err(e) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut => {
+                        // check stop
+                        let check = stop.load(Ordering::Relaxed);
+                        if check == true {
+                            break;
+                        }
                     }
-                }
-                Err(e) => {
-                    eprintln!("{:?}",e);
-                    break;
-                }  
+                    Err(e) => {
+                        eprintln!("{:?}",e);
+                        break;
+                    }  
             }
         }
 }
@@ -177,83 +177,99 @@ pub fn send_message(socket: &UdpSocket, peer: &PeerInfo, aes_key: &[u8; 32], msg
 /// On failure, returns an `io::Error` describing the issue.
 pub fn wait_for_peer(
     socket: &UdpSocket,
-    incoming: &Sender<BackendEvent>
+    incoming: &Sender<BackendEvent>,
+    stop: Arc<AtomicBool>
 ) -> io::Result<PeerInfo> {
     
     incoming.send(
         BackendEvent::Log("Waiting for peer".to_string())
     ).ok();
     
+    socket.set_read_timeout(Some(Duration::from_secs(1))).expect("set read tiemout failed");
     let mut buf = [0u8; 4096];
 
     loop {
-        let (len, _) = socket.recv_from(&mut buf)?;
+        match socket.recv_from(&mut buf){
+            Ok((len,_)) => {
+
+                incoming.send(
+                BackendEvent::Log("Data recieved from relay server".to_string())
+                ).ok();
         
-        incoming.send(
-            BackendEvent::Log("Data recieved from relay server".to_string())
-        ).ok();
-        
-        let data = str::from_utf8(&buf[..len]).map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Invalid UTF-8: {}", e),
-            )
-        })?;
+                let data = str::from_utf8(&buf[..len]).map_err(|e| {
+                    io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Invalid UTF-8: {}", e),
+                    )
+                })?;
 
-        let data = data.trim();
+                let data = data.trim();
 
-        let parts: Vec<&str> = data.split_whitespace().collect();
+                let parts: Vec<&str> = data.split_whitespace().collect();
 
-        if parts.len() != 4 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Invalid peer info format: {}", data),
-            ));
-        }
+                if parts.len() != 4 {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("Invalid peer info format: {}", data),
+                    ));
+                }
 
-        let ip = parts[0].to_string();
+                let ip = parts[0].to_string();
 
-        let sport: u16 = parts[1].parse().map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Invalid port: {}", parts[1]),
-            )
-        })?;
-
-        //decode pubkey b64 -> bytes
-        let pubkey_bytes = general_purpose::STANDARD
-            .decode(parts[2])
-            .map_err(|_| {
+                let sport: u16 = parts[1].parse().map_err(|_| {
                 io::Error::new(
-                    io::ErrorKind::InvalidData, 
-                    "Invalid base64 public key",
-                )
-            })?;
+                        io::ErrorKind::InvalidData,
+                        format!("Invalid port: {}", parts[1]),
+                    )
+                })?;
 
-        if pubkey_bytes.len() != 32 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Invalid public key length",
-            ));
-        }
+                //decode pubkey b64 -> bytes
+                let pubkey_bytes = general_purpose::STANDARD
+                    .decode(parts[2])
+                    .map_err(|_| {
+                        io::Error::new(
+                            io::ErrorKind::InvalidData, 
+                            "Invalid base64 public key",
+                        )
+                    })?;
+
+                if pubkey_bytes.len() != 32 {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "Invalid public key length",
+                    ));
+                }
         
-        //reconstruct pubkey bytes -> Pubkey
-        let mut pubkey_array = [0u8;32];
-        pubkey_array.copy_from_slice(&pubkey_bytes);
-        let pubkey_other = PublicKey::from(pubkey_array);
+                //reconstruct pubkey bytes -> Pubkey
+                let mut pubkey_array = [0u8;32];
+                pubkey_array.copy_from_slice(&pubkey_bytes);
+                let pubkey_other = PublicKey::from(pubkey_array);
 
-        let peer_username = parts[3].to_string();
+                let peer_username = parts[3].to_string();
 
-        incoming.send(
-            BackendEvent::PeerConnected { username: peer_username.clone(), 
+                incoming.send(
+                    BackendEvent::PeerConnected { username: peer_username.clone(), 
+                    }
+                ).ok();
+
+                return Ok(PeerInfo {
+                    peer_ip: ip,
+                    sport,
+                    peer_pubkey: pubkey_other,
+                    peer_username,
+                });
+
             }
-        ).ok();
-
-        return Ok(PeerInfo {
-            peer_ip: ip,
-            sport,
-            peer_pubkey: pubkey_other,
-            peer_username,
-        });
+            Err(e ) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut => {
+                let check = stop.load(Ordering::Relaxed);
+                if check == true {
+                    break Err(io::Error::new(ErrorKind::ConnectionReset,"Client quit config Menu"));
+                }
+            }
+            Err(e) => {
+                eprintln!("{:?}",e);
+                break Err(io::Error::new(ErrorKind::Other, e))
+            }
+        }
     }
 }

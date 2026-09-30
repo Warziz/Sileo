@@ -30,7 +30,7 @@ impl AppState {
             Ok(config) => {
 
                 self.screen = Screen::Chat;
-
+                let stop = self.stop.clone();
                 let tx_logs = self.tx_from_backend.clone();
                 let rx_backend = self.rx_to_backend.take().expect("Backend already started");
                 let check  = self.check.clone();
@@ -39,7 +39,7 @@ impl AppState {
 
                     
                     tx_logs.send(BackendEvent::Log("Backend starting...".to_string())).ok();
-                    let msg_client = match MessagingClient::new(config, tx_logs.clone(), rx_backend){
+                    let msg_client = match MessagingClient::new(config, tx_logs.clone(), rx_backend, stop){
                         Ok(client) => client,
                         Err(err) => {
                             tx_logs.send(BackendEvent::Error(err.to_string())).ok();
@@ -99,7 +99,15 @@ impl AppState {
                 
             }
 
+            // closing socket
+            self.stop.store(true, Ordering::Relaxed);
+            // closing thread
+            let handler = mem::take(&mut self.handler);
+            for handle in handler.into_iter() {
+                handle.join().expect("Failed to join");
+            }
             // reset client
+    
             self.check.store(0, Ordering::Relaxed);
             self.screen = Screen::Welcome;
         
