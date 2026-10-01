@@ -10,8 +10,6 @@ use crate::messaging::utils::user::generate_username;
 pub struct Config {
     /// Selected peer connection method.
     pub method: ConnectionMethod,
-    /// Enables anonymous mode when set to `true`.
-    pub anonymous: bool,
     /// Username used to identify the client.
     pub username: String,
     /// IP address of the rendezvous server.
@@ -80,7 +78,6 @@ impl Config {
 
         Ok(Self {
             method,
-            anonymous,
             username,
             server_ip,
             server_port,
