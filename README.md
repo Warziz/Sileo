@@ -11,11 +11,9 @@
 - **Double connection method** :
   - `hole` : **Hole Punching** pur for NAT traversal.
   - `upnp` : Automatic configuration of your router to open the necessary ports.
-  - `both` : Both method will be tested.
 - **End to End Encryption** (E2EE) for confidentiality.
 - **Ephemeral messages** : no local or remote storage, nothing is retained.
 - **Anonymous** : A random or chosen pseudonym, with no connection to your real identity.
-- **Customizable meeting server** to find your peers.
 
 ---
 
@@ -37,7 +35,8 @@ cargo build
 | `username`         | `str` | *None*  | Choose your pseudonym.                                                     |
 | `server-ip`        | `str` | *None*  | Appointment server IP address (must be the same for both contacts).        |
 | `server-port`      | `int` | *None*  | Appointment server port.                                                   |
-| `source-port`      | `int` | `50001` | Source port for Hole Punching or UPnP.                                     |
-| `destination-port` | `int` | `50002` | Destination port for Hole Punching or UPnP.                                |
+| `source-port`      | `int` | `50001` | Source port for Hole Punching or intern port for UPnP.                                     |
+| `destination-port` | `int` | `50002` | Destination port for Hole Punching or extern port for UPnP.                                |
 
-## Example of use
+## :warning: Meeting Server :warning:
+The meeting server is still a PoC and use for testing. Improvement are coming...
