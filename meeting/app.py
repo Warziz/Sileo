@@ -1,8 +1,9 @@
 import socket
 import json
 from Crypto.Util import number
+from collections import defaultdict
 
-
+"""
 def gen_prime(keylenght=2048):
     return number.getPrime(keylenght)
 
@@ -13,7 +14,7 @@ def generator(g=2):
         raise ValueError("Invalide Generator !")
     else:
         return g
-
+"""
 
 def init_sock():
     print("[*] Start listening")
@@ -37,39 +38,47 @@ def parser(data: bytes, address: tuple) -> dict:
 
     return decoded_data
 
+def find_username(username:str, searcher_username:str):
+    for client in clients:
+        if client["username"] == username and client["search"] == searcher_username:
+            return client
+    return None
 
-def get_conn(sock: socket.socket, p: int, info: dict, address: tuple):
-    if info["status"] == "check":
-        g = generator()
-        sock.sendto(f"{p} {g}".encode(), address)
+def get_conn(sock: socket.socket, info: dict, address: tuple):
 
-    elif info["status"] == "pubkey":
+    if info["status"] == "Pubkey":
         # Réception de la clé publique du client
         pending_keys[address] = info["pubkey"]
 
-    elif info["status"] == "ready":
+    elif info["status"] == "Ready":
         # Vérifie si la clé publique a été reçue avant
         pubkey = pending_keys.get(address)
         if not pubkey:
             print(f"[-] Clé publique manquante pour {address}")
-
-        sock.sendto(b"ready", address)
-        if info["method"] == "hole":
-            client_data = (info["ip_pub"], info["sport"], info["username"], pubkey)
-            clients.append((address, client_data))
-        else:
-            client_data = (info["ip_pub"], info["dport"], info["username"], pubkey)
-            clients.append((address, client_data))
+        #faire le check des utilisateurs recherché ici.
+        #print("Send ready message")
+        #sock.sendto(b"ready", address)
+        
+        client_data = {
+            "ip_pub": info["ip_pub"], 
+            "port": info["sport"] if info["method"] == "Hole" else info["destination_port"], 
+            "username": info["username"], 
+            "search": info["search"],
+            "pubkey": pubkey
+        }
+        clients.append(client_data)
+        print(clients)
+ 
 
         if len(clients) >= 2:
-            (addr1, data1), (addr2, data2) = clients.pop(0), clients.pop(0)
+            data1, data2 = clients.pop(0), clients.pop(0)
 
             # Envoie des infos croisées
             # Format: IP, port, public_key, username
-            msg1 = f"{data2[0]} {data2[1]} {data2[3]} {data2[2]}"
-            msg2 = f"{data1[0]} {data1[1]} {data1[3]} {data1[2]}"
-            sock.sendto(msg1.encode(), addr1)
-            sock.sendto(msg2.encode(), addr2)
+            msg1 = f"{data2["ip_pub"]} {data2["port"]} {data2["pubkey"]} {data2["username"]}"
+            msg2 = f"{data1["ip_pub"]} {data1["port"]} {data1["pubkey"]} {data1["username"]}"
+            sock.sendto(msg1.encode(), (data1["ip_pub"],data1["port"]))
+            sock.sendto(msg2.encode(), (data2["ip_pub"],data2["port"]))
 
             print(f"[*] Clients connectés via {info['method']}")
 
@@ -77,17 +86,16 @@ def get_conn(sock: socket.socket, p: int, info: dict, address: tuple):
 clients = []  # Stocke (ip, port, username, public_key)
 pending_keys = {}  # address -> public_key temporairement
 
-
-def main(sock: socket.socket, p: int):
+def main(sock: socket.socket):
     while True:
         data, address = sock.recvfrom(4096)
         info = parser(data, address)
         print(f"[+] Reçu de {address}: {info}")
 
-        get_conn(sock, p, info, address)
+        get_conn(sock, info, address)
 
 
 if __name__ == "__main__":
-    p = gen_prime()
+
     sock = init_sock()
-    main(sock, p)
+    main(sock)
